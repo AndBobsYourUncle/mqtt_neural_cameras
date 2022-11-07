@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
     infer_request.start_async();
 
     while (!exit_gracefully) {
-        if (!cap.read(src_img)) {
+        if (!cap.retrieve(src_img)) {
             throw std::logic_error("Failed to get frame from cv::VideoCapture");
         }
 
@@ -353,8 +353,6 @@ int main(int argc, char *argv[])
             out << std::fixed << std::setprecision(2) << wall.count() << " ms (" << 1000.f / wall.count() << " fps)";
             cv::putText(src_img, out.str(), cv::Point2f(0, 50), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255));
 
-            cv::imshow("Test", src_img);
-
             // std::vector<float> padd;
             // cv::Mat boxed = letterbox(src_img, img_h, img_w, padd);
             boxed = letterbox(src_img, img_h, img_w, padd);
@@ -365,6 +363,8 @@ int main(int argc, char *argv[])
             infer_request.set_input_tensor(input_tensor);
 
             t0 = std::chrono::high_resolution_clock::now();
+
+            cv::imshow("Test", src_img);
 
             // -------- Step 7. Start inference --------
             // infer_request.infer();

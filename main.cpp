@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
     infer_request.start_async();
 
     while (!exit_gracefully) {
-        if (!cap.retrieve(src_img)) {
+        if (!cap.read(src_img)) {
             throw std::logic_error("Failed to get frame from cv::VideoCapture");
         }
 

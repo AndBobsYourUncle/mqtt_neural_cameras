@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
         .convert_color(ov::preprocess::ColorFormat::RGB)
         .scale({255.0, 255.0, 255.0});
     // Dump preprocessor
-    // std::cout << "Preprocessor: " << prep << std::endl;
+    std::cout << "Preprocessor: " << prep << std::endl;
     model = prep.build();
     // -------- Step 4. Loading a model to the device --------
     ov::CompiledModel compiled_model = core.compile_model(model, device_name);

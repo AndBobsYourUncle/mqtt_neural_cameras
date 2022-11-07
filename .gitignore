@@ -1,0 +1,7 @@
+.DS_Store
+._.DS_Store
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+mqtt_neural_system
+test.jpg

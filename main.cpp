@@ -1,4 +1,5 @@
 #include <math.h>
+#include <chrono>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -38,6 +39,8 @@ void signalHandler(int signum) {
 
    exit_gracefully = true;
 }
+
+typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
 
 inline float sigmoid(float x)
 {
@@ -274,6 +277,12 @@ int main(int argc, char *argv[])
     ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
     infer_request.set_input_tensor(input_tensor);
 
+    std::chrono::time_point<std::chrono::high_resolution_clock> t0;
+    std::chrono::time_point<std::chrono::high_resolution_clock> t1;
+
+    t0 = std::chrono::high_resolution_clock::now();
+    t1 = std::chrono::high_resolution_clock::now();
+
     // -------- Step 7. Start inference --------
     // infer_request.infer();
     infer_request.start_async();
@@ -334,6 +343,16 @@ int main(int argc, char *argv[])
                 drawPred(classIds[idx], confidences[idx], scaled_box, padd[2], raw_h, raw_w, src_img, class_names);
             }
 
+            t1 = std::chrono::high_resolution_clock::now();
+
+            ms wall = std::chrono::duration_cast<ms>(t1 - t0);
+
+            std::ostringstream out;
+
+            out << "Wallclock time: ";
+            out << std::fixed << std::setprecision(2) << wall.count() << " ms (" << 1000.f / wall.count() << " fps)";
+            cv::putText(src_img, out.str(), cv::Point2f(0, 50), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255));
+
             cv::imshow("Test", src_img);
 
             // std::vector<float> padd;
@@ -344,6 +363,8 @@ int main(int argc, char *argv[])
             boxed.convertTo(boxed, CV_32FC3);
             ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
             infer_request.set_input_tensor(input_tensor);
+
+            t0 = std::chrono::high_resolution_clock::now();
 
             // -------- Step 7. Start inference --------
             // infer_request.infer();

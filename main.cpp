@@ -107,10 +107,12 @@ void parse(int argc, char *argv[]) {
                   << "\n    [-show_stats]     " << show_statistics
                   << "\n    [-real_input_fps] " << real_input_fps
                   << "\n    [-u]              " << utilization_monitors_message
+// ADDED STUFF START
                   << "\n    -mh               " << mqtt_host_message
                   << "\n    -mu               " << mqtt_username
                   << "\n    -mp               " << mqtt_password
                   << "\n    -mt               " << mqtt_topic << '\n';
+// ADDED STUFF END
         showAvailableDevices();
         std::exit(0);
     } if (FLAGS_m.empty()) {
@@ -257,10 +259,12 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
                       colors[static_cast<int>(f.class_id)],
                       2);
 
+        // ADDED STUFF START
         int baseLine;
         cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
         cv::putText(img, label, cv::Point(f.xmin, f.ymin - labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, colors[static_cast<int>(f.class_id)], 1.5);
+        // ADDED STUFF END
     }
 }
 
@@ -356,9 +360,11 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
         cv::imshow(params.name, windowImage);
     }
 
+    // ADDED STUFF START
     std::vector<uchar> buff_bgr;
     cv::imencode(".jpg", windowImage, buff_bgr, stream_params);
     streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
+    // ADDED STUFF END
 }
 }  // namespace
 
@@ -371,6 +377,7 @@ int main(int argc, char* argv[]) {
         const std::vector<std::string>& inputs = split(FLAGS_i, ',');
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
+        // ADDED STUFF START
         std::string address = FLAGS_mh;
 
         slog::info << "Connecting to server '" << address << "'..." << slog::endl;
@@ -389,6 +396,7 @@ int main(int argc, char* argv[]) {
         slog::info << "OK" << slog::endl;
 
         streamer.start(8080);
+        // ADDED STUFF END
 
         ov::Core core;
         std::shared_ptr<ov::Model> model = core.read_model(FLAGS_m);
@@ -565,7 +573,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // ADDED STUFF START
     streamer.stop();
+    // ADDED STUFF END
 
     return 0;
 }

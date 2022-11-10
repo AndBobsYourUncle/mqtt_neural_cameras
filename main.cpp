@@ -1,25 +1,41 @@
-#include <math.h>
-#include <chrono>
+// Copyright (C) 2018-2021 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+//
+/**
+* \brief The entry point for the OpenVINIO multichannel_yolo_detection demo application
+* \file multichannel_yolo_detection/main.cpp
+* \example multichannel_yolo_detection/main.cpp
+*/
+#include <iostream>
 #include <vector>
-#include <string>
+#include <utility>
+
 #include <algorithm>
-#include <cmath>
-#include <csignal>
-#include <stdlib.h>
-#include <opencv2/core/core.hpp>
+#include <mutex>
+#include <queue>
+#include <chrono>
+#include <sstream>
+#include <memory>
+#include <string>
+
+#ifdef USE_TBB
+#include <tbb/parallel_for.h>
+#endif
+
 #include <opencv2/opencv.hpp>
-#include <opencv2/dnn/dnn.hpp>
-#include <openvino/openvino.hpp>
-#include <openvino/core/preprocess/pre_post_process.hpp>
+#include <openvino/op/region_yolo.hpp>
 
-using namespace std;
+#include <monitors/presenter.h>
+#include <utils/ocv_common.hpp>
+#include <utils/slog.hpp>
 
-struct Object
-{
-    cv::Rect_<float> rect;
-    int label;
-    float prob;
-};
+#include "input.hpp"
+#include "multichannel_params.hpp"
+#include "output.hpp"
+#include "threading.hpp"
+#include "graph.hpp"
+
+// ADDED STUFF START
 
 const std::vector<std::string> class_names = {
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -32,354 +48,459 @@ const std::vector<std::string> class_names = {
     "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
     "hair drier", "toothbrush"};
 
-bool exit_gracefully = false;
+// ADDED STUFF END
 
-void signalHandler(int signum) {
-   std::cout << "Interrupt signal (" << signum << ") received. Exiting gracefully...\n";
+namespace {
+constexpr char threshold_message[] = "Probability threshold for detections";
+DEFINE_double(t, 0.5, threshold_message);
 
-   exit_gracefully = true;
-}
-
-typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
-
-inline float sigmoid(float x)
-{
-    return static_cast<float>(1.f / (1.f + exp(-x)));
-}
-
-cv::Mat letterbox(cv::Mat &src, int h, int w, std::vector<float> &padd)
-{
-    // Resize and pad image while meeting stride-multiple constraints
-    int in_w = src.cols;
-    int in_h = src.rows;
-    int tar_w = w;
-    int tar_h = h;
-    float r = min(float(tar_h) / in_h, float(tar_w) / in_w);
-    int inside_w = round(in_w * r);
-    int inside_h = round(in_h * r);
-    int padd_w = tar_w - inside_w;
-    int padd_h = tar_h - inside_h;
-    cv::Mat resize_img;
-
-    // resize
-    resize(src, resize_img, cv::Size(inside_w, inside_h));
-
-    // divide padding into 2 sides
-    padd_w = padd_w / 2;
-    padd_h = padd_h / 2;
-    padd.push_back(padd_w);
-    padd.push_back(padd_h);
-
-    // store the ratio
-    padd.push_back(r);
-    int top = int(round(padd_h - 0.1));
-    int bottom = int(round(padd_h + 0.1));
-    int left = int(round(padd_w - 0.1));
-    int right = int(round(padd_w + 0.1));
-
-    // add border
-    copyMakeBorder(resize_img, resize_img, top, bottom, left, right, 0, cv::Scalar(114, 114, 114));
-    return resize_img;
-}
-
-cv::Rect scale_box(cv::Rect box, std::vector<float> &padd)
-{
-    // remove the padding area
-    cv::Rect scaled_box;
-    scaled_box.x = box.x - padd[0];
-    scaled_box.y = box.y - padd[1];
-    scaled_box.width = box.width;
-    scaled_box.height = box.height;
-    return scaled_box;
-}
-
-void drawPred(int classId, float conf, cv::Rect box, float ratio, float raw_h, float raw_w, cv::Mat &frame,
-              const std::vector<std::string> &classes)
-{
-    float x0 = box.x;
-    float y0 = box.y;
-    float x1 = box.x + box.width;
-    float y1 = box.y + box.height;
-
-    // scale the bounding boxes to size of origin image
-    x0 = x0 / ratio;
-    y0 = y0 / ratio;
-    x1 = x1 / ratio;
-    y1 = y1 / ratio;
-
-    // Clip bounding boxes to image shape
-    x0 = std::max(std::min(x0, (float)(raw_w - 1)), 0.f);
-    y0 = std::max(std::min(y0, (float)(raw_h - 1)), 0.f);
-    x1 = std::max(std::min(x1, (float)(raw_w - 1)), 0.f);
-    y1 = std::max(std::min(y1, (float)(raw_h - 1)), 0.f);
-
-    // Draw the bouding boxes and put the label text on the origin image
-    cv::rectangle(frame, cv::Point(x0, y0), cv::Point(x1, y1), cv::Scalar(0, 255, 0), 1);
-    std::string label = cv::format("%.2f", conf);
-    if (!classes.empty())
-    {
-        CV_Assert(classId < (int)classes.size());
-        label = classes[classId] + ": " + label;
+void parse(int argc, char *argv[]) {
+    gflags::ParseCommandLineFlags(&argc, &argv, false);
+    slog::info << ov::get_openvino_version() << slog::endl;
+    if (FLAGS_h || argc == 1) {
+        std::cout << "\n    [-h]              " << help_message
+                  << "\n     -i               " << input_message
+                  << "\n    [-loop]           " << loop_message
+                  << "\n    [-duplicate_num]  " << duplication_channel_number_message
+                  << "\n     -m <path>        " << model_path_message
+                  << "\n    [-d <device>]     " << target_device_message
+                  << "\n    [-n_iqs]          " << input_queue_size
+                  << "\n    [-fps_sp]         " << fps_sampling_period
+                  << "\n    [-n_sp]           " << num_sampling_periods
+                  << "\n    [-t]              " << threshold_message
+                  << "\n    [-no_show]        " << no_show_message
+                  << "\n    [-show_stats]     " << show_statistics
+                  << "\n    [-real_input_fps] " << real_input_fps
+                  << "\n    [-u]              " << utilization_monitors_message << '\n';
+        showAvailableDevices();
+        std::exit(0);
+    } if (FLAGS_m.empty()) {
+        throw std::runtime_error("Parameter -m is not set");
+    } if (FLAGS_i.empty()) {
+        throw std::runtime_error("Parameter -i is not set");
+    } if (FLAGS_duplicate_num == 0) {
+        throw std::runtime_error("Parameter -duplicate_num must be positive");
+    } if (FLAGS_bs != 1) {
+        throw std::runtime_error("Parameter -bs must be 1");
     }
-    int baseLine;
-    cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
-    y0 = max(int(y0), labelSize.height);
-    cv::rectangle(frame, cv::Point(x0, y0 - round(1.5 * labelSize.height)), cv::Point(x0 + round(2 * labelSize.width), y0 + baseLine), cv::Scalar(0, 255, 0), cv::FILLED);
-    cv::putText(frame, label, cv::Point(x0, y0), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1.5);
 }
 
-static void generate_proposals(int stride, const float *feat, float prob_threshold, std::vector<Object> &objects)
-{
-    // get the results from proposals
-    float anchors[18] = {12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401};
-    int anchor_num = 3;
-    int feat_w = 640 / stride;
-    int feat_h = 640 / stride;
-    int cls_num = 80;
-    int anchor_group = 0;
-    if (stride == 8)
-        anchor_group = 0;
-    if (stride == 16)
-        anchor_group = 1;
-    if (stride == 32)
-        anchor_group = 2;
+static int EntryIndex(int side, int lcoords, int lclasses, int location, int entry) {
+    int n = location / (side * side);
+    int loc = location % (side * side);
+    return n * side * side * (lcoords + lclasses + 1) + entry * side * side + loc;
+}
 
-    // 3 x h x w x (80 + 5)
-    for (int anchor = 0; anchor <= anchor_num - 1; anchor++)
-    {
-        for (int i = 0; i <= feat_h - 1; i++)
-        {
-            for (int j = 0; j <= feat_w - 1; j++)
-            {
-                float box_prob = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + 4];
-                box_prob = sigmoid(box_prob);
+class YoloParams {
+    template <typename T>
+    void computeAnchors(const std::vector<float> & initialAnchors, const std::vector<T> & mask) {
+        anchors.resize(num * 2);
+        for (int i = 0; i < num; ++i) {
+            anchors[i * 2] = initialAnchors[mask[i] * 2];
+            anchors[i * 2 + 1] = initialAnchors[mask[i] * 2 + 1];
+        }
+    }
 
-                // filter the bounding box with low confidence
-                if (box_prob < prob_threshold)
+public:
+    int num = 0, classes = 0, coords = 0;
+    std::vector<float> anchors;
+
+    YoloParams() {}
+
+    YoloParams(const ov::op::v0::RegionYolo& regionYolo) {
+        coords = regionYolo.get_num_coords();
+        classes = regionYolo.get_num_classes();
+        const std::vector<float>& initialAnchors = regionYolo.get_anchors();
+        const std::vector<int64_t>& mask = regionYolo.get_mask();
+        num = mask.size();
+
+        computeAnchors(initialAnchors, mask);
+    }
+};
+
+struct DetectionObject {
+    int xmin, ymin, xmax, ymax, class_id;
+    float confidence;
+
+    DetectionObject(double x, double y, double h, double w, int class_id, float confidence, float h_scale, float w_scale) :
+        xmin{static_cast<int>((x - w / 2) * w_scale)},
+        ymin{static_cast<int>((y - h / 2) * h_scale)},
+        xmax{static_cast<int>(this->xmin + w * w_scale)},
+        ymax{static_cast<int>(this->ymin + h * h_scale)},
+        class_id{class_id},
+        confidence{confidence} {}
+
+    bool operator <(const DetectionObject &s2) const {
+        return this->confidence < s2.confidence;
+    }
+    bool operator >(const DetectionObject &s2) const {
+        return this->confidence > s2.confidence;
+    }
+};
+
+double IntersectionOverUnion(const DetectionObject &box_1, const DetectionObject &box_2) {
+    double width_of_overlap_area = fmin(box_1.xmax, box_2.xmax) - fmax(box_1.xmin, box_2.xmin);
+    double height_of_overlap_area = fmin(box_1.ymax, box_2.ymax) - fmax(box_1.ymin, box_2.ymin);
+    double area_of_overlap;
+    if (width_of_overlap_area < 0 || height_of_overlap_area < 0)
+        area_of_overlap = 0;
+    else
+        area_of_overlap = width_of_overlap_area * height_of_overlap_area;
+    double box_1_area = (box_1.ymax - box_1.ymin)  * (box_1.xmax - box_1.xmin);
+    double box_2_area = (box_2.ymax - box_2.ymin)  * (box_2.xmax - box_2.xmin);
+    double area_of_union = box_1_area + box_2_area - area_of_overlap;
+    return area_of_overlap / area_of_union;
+}
+
+void parseYOLOOutput(ov::Tensor tensor,
+                    const YoloParams &yoloParams, const unsigned long resized_im_h,
+                    const unsigned long resized_im_w, const unsigned long original_im_h,
+                    const unsigned long original_im_w,
+                    const double threshold, std::vector<DetectionObject> &objects) {
+
+    const int height = static_cast<int>(tensor.get_shape()[2]);
+    const int width = static_cast<int>(tensor.get_shape()[3]);
+    if (height != width)
+        throw std::runtime_error("Invalid size of output. It should be in NCHW layout and H should be equal to W. Current H = " + std::to_string(height) +
+        ", current W = " + std::to_string(height));
+
+    auto num = yoloParams.num;
+    auto coords = yoloParams.coords;
+    auto classes = yoloParams.classes;
+
+    auto anchors = yoloParams.anchors;
+
+    auto side = height;
+    auto side_square = side * side;
+    const float* data = tensor.data<float>();
+    // --------------------------- Parsing YOLO Region output -------------------------------------
+    for (int i = 0; i < side_square; ++i) {
+        int row = i / side;
+        int col = i % side;
+        for (int n = 0; n < num; ++n) {
+            int obj_index = EntryIndex(side, coords, classes, n * side * side + i, coords);
+            int box_index = EntryIndex(side, coords, classes, n * side * side + i, 0);
+            float scale = data[obj_index];
+            if (scale < threshold)
+                continue;
+            double x = (col + data[box_index + 0 * side_square]) / side * resized_im_w;
+            double y = (row + data[box_index + 1 * side_square]) / side * resized_im_h;
+            double height = std::exp(data[box_index + 3 * side_square]) * anchors[2 * n + 1];
+            double width = std::exp(data[box_index + 2 * side_square]) * anchors[2 * n];
+            for (int j = 0; j < classes; ++j) {
+                int class_index = EntryIndex(side, coords, classes, n * side_square + i, coords + 1 + j);
+                float prob = scale * data[class_index];
+                if (prob < threshold)
                     continue;
-                float x = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + 0];
-                float y = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + 1];
-                float w = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + 2];
-                float h = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + 3];
-
-                double max_prob = 0;
-                int idx = 0;
-
-                // get the class id with maximum confidence
-                for (int t = 5; t < 85; ++t)
-                {
-                    double tp = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + t];
-                    tp = sigmoid(tp);
-                    if (tp > max_prob)
-                    {
-                        max_prob = tp;
-                        idx = t;
-                    }
-                }
-
-                // filter the class with low confidence
-                float cof = box_prob * max_prob;
-                if (cof < prob_threshold)
-                    continue;
-
-                // convert results to xywh
-                x = (sigmoid(x) * 2 - 0.5 + j) * stride;
-                y = (sigmoid(y) * 2 - 0.5 + i) * stride;
-                w = pow(sigmoid(w) * 2, 2) * anchors[anchor_group * 6 + anchor * 2];
-                h = pow(sigmoid(h) * 2, 2) * anchors[anchor_group * 6 + anchor * 2 + 1];
-
-                float r_x = x - w / 2;
-                float r_y = y - h / 2;
-
-                // store the results
-                Object obj;
-                obj.rect.x = r_x;
-                obj.rect.y = r_y;
-                obj.rect.width = w;
-                obj.rect.height = h;
-                obj.label = idx - 5;
-                obj.prob = cof;
+                DetectionObject obj(x, y, height, width, j, prob,
+                        static_cast<float>(original_im_h) / static_cast<float>(resized_im_h),
+                        static_cast<float>(original_im_w) / static_cast<float>(resized_im_w));
                 objects.push_back(obj);
             }
         }
     }
 }
 
-int main(int argc, char *argv[])
-{
-    signal(SIGINT, signalHandler);
-    signal(SIGTERM, signalHandler);
-
-    // set the hyperparameters
-    int img_h = 640;
-    int img_w = 640;
-    int img_c = 3;
-    int img_size = img_h * img_h * img_c;
-
-    const float prob_threshold = 0.30f;
-    const float nms_threshold = 0.60f;
-
-    const std::string model_path = "../yolov7/yolov7-tiny.onnx";
-
-    const std::string device_name = "CPU";
-
-    cv::VideoCapture cap;
-    cv::Mat src_img;
-
-    // cap.open("http://192.168.1.52:8082");
-
-    if (!cap.open("http://192.168.1.52:8081")) {
-        throw std::logic_error("Cannot open input file or camera");
-    }
-
-    if (!cap.read(src_img)) {
-        throw std::logic_error("Failed to get frame from cv::VideoCapture");
-    }
-
-    // -------- Step 1. Initialize OpenVINO Runtime Core --------
-    ov::Core core;
-
-    // -------- Step 2. Read a model --------
-    std::shared_ptr<ov::Model> model = core.read_model(model_path);
-
-    // -------- Step 3. Preprocessing API--------
-    ov::preprocess::PrePostProcessor prep(model);
-    // Declare section of desired application's input format
-    prep.input().tensor()
-        .set_layout("NHWC")
-        .set_color_format(ov::preprocess::ColorFormat::BGR);
-    // Specify actual model layout
-    prep.input().model()
-        .set_layout("NCHW");
-    // Convert current color format (BGR) to RGB
-    prep.input().preprocess()
-        .convert_color(ov::preprocess::ColorFormat::RGB)
-        .scale({255.0, 255.0, 255.0});
-    // Dump preprocessor
-    std::cout << "Preprocessor: " << prep << std::endl;
-    model = prep.build();
-    // -------- Step 4. Loading a model to the device --------
-    ov::CompiledModel compiled_model = core.compile_model(model, device_name);
-
-    // Get input port for model with one input
-    auto input_port = compiled_model.input();
-    // Create tensor from external memory
-    // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), input_data.data());
-
-    // -------- Step 5. Create an infer request --------
-    ov::InferRequest infer_request = compiled_model.create_infer_request();
-
-    std::vector<float> padd;
-    cv::Mat boxed = letterbox(src_img, img_h, img_w, padd);
-
-    // -------- Step 6. Set input --------
-    boxed.convertTo(boxed, CV_32FC3);
-    ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
-    infer_request.set_input_tensor(input_tensor);
-
-    std::chrono::time_point<std::chrono::high_resolution_clock> t0;
-    std::chrono::time_point<std::chrono::high_resolution_clock> t1;
-
-    t0 = std::chrono::high_resolution_clock::now();
-    t1 = std::chrono::high_resolution_clock::now();
-
-    // -------- Step 7. Start inference --------
-    // infer_request.infer();
-    infer_request.start_async();
-
-    while (!exit_gracefully) {
-        if (!cap.read(src_img)) {
-            throw std::logic_error("Failed to get frame from cv::VideoCapture");
+void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors) {
+    for (const DetectionObject& f : detections) {
+        std::string label = cv::format("%.2f", f.confidence);
+        if (!class_names.empty())
+        {
+            CV_Assert(f.class_id < (int)class_names.size());
+            label = class_names[f.class_id] + ": " + label;
         }
 
-        if (infer_request.wait_for(std::chrono::milliseconds(0))) {
-            // -------- Step 8. Process output --------
-            auto output_tensor_p8 = infer_request.get_output_tensor(0);
-            const float *result_p8 = output_tensor_p8.data<const float>();
-            auto output_tensor_p16 = infer_request.get_output_tensor(1);
-            const float *result_p16 = output_tensor_p16.data<const float>();
-            auto output_tensor_p32 = infer_request.get_output_tensor(2);
-            const float *result_p32 = output_tensor_p32.data<const float>();
+        cv::rectangle(img,
+                      cv::Rect2f(static_cast<float>(f.xmin),
+                                 static_cast<float>(f.ymin),
+                                 static_cast<float>((f.xmax-f.xmin)),
+                                 static_cast<float>((f.ymax-f.ymin))),
+                      colors[static_cast<int>(f.class_id)],
+                      2);
 
-            std::vector<Object> proposals;
-            std::vector<Object> objects8;
-            std::vector<Object> objects16;
-            std::vector<Object> objects32;
-            std::vector<Object> objects;
+        int baseLine;
+        cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
-            generate_proposals(8, result_p8, prob_threshold, objects8);
-            proposals.insert(proposals.end(), objects8.begin(), objects8.end());
-            generate_proposals(16, result_p16, prob_threshold, objects16);
-            proposals.insert(proposals.end(), objects16.begin(), objects16.end());
-            generate_proposals(32, result_p32, prob_threshold, objects32);
-            proposals.insert(proposals.end(), objects32.begin(), objects32.end());
+        cv::putText(img, label, cv::Point(f.xmin, f.ymin - labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, colors[static_cast<int>(f.class_id)], 1.5);
+    }
+}
 
-            std::vector<int> classIds;
-            std::vector<float> confidences;
-            std::vector<cv::Rect> boxes;
+const size_t DISP_WIDTH  = 800;
+const size_t DISP_HEIGHT = 600;
+const size_t MAX_INPUTS  = 25;
 
-            for (size_t i = 0; i < proposals.size(); i++)
-            {
-                classIds.push_back(proposals[i].label);
-                confidences.push_back(proposals[i].prob);
-                boxes.push_back(proposals[i].rect);
+struct DisplayParams {
+    std::string name;
+    cv::Size windowSize;
+    cv::Size frameSize;
+    size_t count;
+    cv::Point points[MAX_INPUTS];
+};
+
+DisplayParams prepareDisplayParams(size_t count) {
+    DisplayParams params;
+    params.count = count;
+    params.windowSize = cv::Size(DISP_WIDTH, DISP_HEIGHT);
+
+    size_t gridCount = static_cast<size_t>(ceil(sqrt(count)));
+    size_t gridStepX = static_cast<size_t>(DISP_WIDTH/gridCount);
+    size_t gridStepY = static_cast<size_t>(DISP_HEIGHT/gridCount);
+    if (gridStepX == 0 || gridStepY == 0) {
+        throw std::logic_error("Can't display every input: there are too many of them");
+    }
+    params.frameSize = cv::Size(gridStepX, gridStepY);
+
+    for (size_t i = 0; i < count; i++) {
+        cv::Point p;
+        p.x = gridStepX * (i/gridCount);
+        p.y = gridStepY * (i%gridCount);
+        params.points[i] = p;
+    }
+    return params;
+}
+
+void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
+                     const std::string& stats,
+                     const DisplayParams& params,
+                     const std::vector<cv::Scalar> &colors,
+                     Presenter& presenter,
+                     PerformanceMetrics& metrics,
+                     bool no_show) {
+    cv::Mat windowImage = cv::Mat::zeros(params.windowSize, CV_8UC3);
+    auto loopBody = [&](size_t i) {
+        auto& elem = data[i];
+        if (!elem->frame.empty()) {
+            cv::Rect rectFrame = cv::Rect(params.points[i], params.frameSize);
+            cv::Mat windowPart = windowImage(rectFrame);
+            cv::resize(elem->frame, windowPart, params.frameSize);
+            drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors);
+        }
+    };
+
+    auto drawStats = [&]() {
+        if (FLAGS_show_stats && !stats.empty()) {
+            static const cv::Point posPoint = cv::Point(3*DISP_WIDTH/4, 4*DISP_HEIGHT/5);
+            auto pos = posPoint + cv::Point(0, 25);
+            size_t currPos = 0;
+            while (true) {
+                auto newPos = stats.find('\n', currPos);
+                putHighlightedText(windowImage, stats.substr(currPos, newPos - currPos), pos,
+                    cv::HersheyFonts::FONT_HERSHEY_COMPLEX, 0.8,  cv::Scalar(0, 0, 255), 2);
+                if (newPos == std::string::npos) {
+                    break;
+                }
+                pos += cv::Point(0, 25);
+                currPos = newPos + 1;
+            }
+        }
+    };
+
+//  #ifdef USE_TBB
+#if 0  // disable multithreaded rendering for now
+    run_in_arena([&](){
+        tbb::parallel_for<size_t>(0, data.size(), [&](size_t i) {
+            loopBody(i);
+        });
+    });
+#else
+    for (size_t i = 0; i < data.size(); ++i) {
+        loopBody(i);
+    }
+#endif
+    presenter.drawGraphs(windowImage);
+    drawStats();
+    for (size_t i = 0; i < data.size() - 1; ++i) {
+        metrics.update(data[i]->timestamp);
+    }
+    metrics.update(data.back()->timestamp, windowImage, { 10, 22 }, cv::FONT_HERSHEY_COMPLEX, 0.65);
+    if (!no_show) {
+        cv::imshow(params.name, windowImage);
+    }
+}
+}  // namespace
+
+int main(int argc, char* argv[]) {
+    try {
+#if USE_TBB
+        TbbArenaWrapper arena;
+#endif
+        parse(argc, argv);
+        const std::vector<std::string>& inputs = split(FLAGS_i, ',');
+        DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
+
+        ov::Core core;
+        std::shared_ptr<ov::Model> model = core.read_model(FLAGS_m);
+        if (model->get_parameters().size() != 1) {
+            throw std::logic_error("Face Detection model must have only one input");
+        }
+        ov::preprocess::PrePostProcessor ppp(model);
+        ppp.input().tensor().set_element_type(ov::element::u8).set_layout("NHWC");
+        for (const ov::Output<ov::Node>& out : model->outputs()) {
+            ppp.output(out.get_any_name()).tensor().set_element_type(ov::element::f32);
+        }
+        model = ppp.build();
+        ov::set_batch(model, FLAGS_bs);
+
+        std::vector<std::pair<ov::Output<ov::Node>, YoloParams>> yoloParams;
+        for (const ov::Output<ov::Node>& out : model->outputs()) {
+            const ov::op::v0::RegionYolo* regionYolo = dynamic_cast<ov::op::v0::RegionYolo*>(out.get_node()->get_input_node_ptr(0));
+            if (!regionYolo) {
+                throw std::runtime_error("Invalid output type: " + std::string(regionYolo->get_type_info().name) + ". RegionYolo expected");
+            }
+            yoloParams.emplace_back(out, *regionYolo);
+        }
+        std::vector<cv::Scalar> colors;
+        if (yoloParams.size() > 0)
+            for (int i = 0; i < static_cast<int>(yoloParams.front().second.classes); ++i)
+                colors.push_back(cv::Scalar(rand() % 256, rand() % 256, rand() % 256));
+
+        std::queue<ov::InferRequest> reqQueue = compile(std::move(model),
+            FLAGS_m, FLAGS_d, roundUp(params.count, FLAGS_bs), core);
+        ov::Shape inputShape = reqQueue.front().get_input_tensor().get_shape();
+        if (4 != inputShape.size()) {
+            throw std::runtime_error("Invalid model input dimensions");
+        }
+        IEGraph graph{std::move(reqQueue), FLAGS_show_stats};
+
+        VideoSources::InitParams vsParams;
+        vsParams.inputs               = inputs;
+        vsParams.loop                 = FLAGS_loop;
+        vsParams.queueSize            = FLAGS_n_iqs;
+        vsParams.collectStats         = FLAGS_show_stats;
+        vsParams.realFps              = FLAGS_real_input_fps;
+        vsParams.expectedHeight = static_cast<unsigned>(inputShape[2]);
+        vsParams.expectedWidth  = static_cast<unsigned>(inputShape[3]);
+
+        VideoSources sources(vsParams);
+        sources.start();
+
+        size_t currentFrame = 0;
+        graph.start(FLAGS_bs, [&](VideoFrame& img) {
+            img.sourceIdx = currentFrame;
+            size_t camIdx = currentFrame / FLAGS_duplicate_num;
+            currentFrame = (currentFrame + 1) % (sources.numberOfInputs() * FLAGS_duplicate_num);
+            return sources.getFrame(camIdx, img);
+        }, [&yoloParams](ov::InferRequest req,
+                cv::Size frameSize
+                ) {
+            unsigned long resized_im_h = 416;
+            unsigned long resized_im_w = 416;
+
+            std::vector<DetectionObject> objects;
+            // Parsing outputs
+            for (const std::pair<ov::Output<ov::Node>, YoloParams>& idxParams : yoloParams) {
+                parseYOLOOutput(req.get_tensor(idxParams.first), idxParams.second, resized_im_h, resized_im_w, frameSize.height, frameSize.width, FLAGS_t, objects);
+            }
+            // Filtering overlapping boxes and lower confidence object
+            std::sort(objects.begin(), objects.end(), std::greater<DetectionObject>());
+            for (size_t i = 0; i < objects.size(); ++i) {
+                if (objects[i].confidence == 0)
+                    continue;
+                for (size_t j = i + 1; j < objects.size(); ++j)
+                    if (IntersectionOverUnion(objects[i], objects[j]) >= 0.4)
+                        objects[j].confidence = 0;
             }
 
-            std::vector<int> picked;
+            std::vector<Detections> detections(1);
+            detections[0].set(new std::vector<DetectionObject>);
 
-            // do non maximum suppression for each bounding boxx
-            cv::dnn::NMSBoxes(boxes, confidences, prob_threshold, nms_threshold, picked);
-
-            float raw_h = src_img.rows;
-            float raw_w = src_img.cols;
-            float ratio_x = (float)raw_w / img_w;
-            float ratio_y = (float)raw_h / img_h;
-
-            for (size_t i = 0; i < picked.size(); i++)
-            {
-                int idx = picked[i];
-                cv::Rect box = boxes[idx];
-                cv::Rect scaled_box = scale_box(box, padd);
-                drawPred(classIds[idx], confidences[idx], scaled_box, padd[2], raw_h, raw_w, src_img, class_names);
+            for (auto &object : objects) {
+                if (object.confidence < FLAGS_t)
+                    continue;
+                detections[0].get<std::vector<DetectionObject>>().push_back(object);
             }
 
-            t1 = std::chrono::high_resolution_clock::now();
+            return detections;
+        });
 
-            ms wall = std::chrono::duration_cast<ms>(t1 - t0);
+        std::mutex statMutex;
+        std::stringstream statStream;
 
-            std::ostringstream out;
+        cv::Size graphSize{static_cast<int>(params.windowSize.width / 4), 60};
+        Presenter presenter(FLAGS_u, params.windowSize.height - graphSize.height - 10, graphSize);
+        PerformanceMetrics metrics;
 
-            out << "Wallclock time: ";
-            out << std::fixed << std::setprecision(2) << wall.count() << " ms (" << 1000.f / wall.count() << " fps)";
-            cv::putText(src_img, out.str(), cv::Point2f(0, 50), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(0, 0, 255));
+        const size_t outputQueueSize = 1;
+        AsyncOutput output(FLAGS_show_stats, outputQueueSize,
+        [&](const std::vector<std::shared_ptr<VideoFrame>>& result) {
+            std::string str;
+            if (FLAGS_show_stats) {
+                std::unique_lock<std::mutex> lock(statMutex);
+                str = statStream.str();
+            }
+            displayNSources(result, str, params, colors, presenter, metrics, FLAGS_no_show);
+            int key = cv::waitKey(1);
+            presenter.handleKey(key);
 
-            // std::vector<float> padd;
-            // cv::Mat boxed = letterbox(src_img, img_h, img_w, padd);
-            boxed = letterbox(src_img, img_h, img_w, padd);
+            return (key != 27);
+        });
 
-            // -------- Step 6. Set input --------
-            boxed.convertTo(boxed, CV_32FC3);
-            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
-            infer_request.set_input_tensor(input_tensor);
+        output.start();
 
-            t0 = std::chrono::high_resolution_clock::now();
+        std::vector<std::shared_ptr<VideoFrame>> batchRes;
+        using timer = std::chrono::high_resolution_clock;
+        using duration = std::chrono::duration<float, std::milli>;
+        timer::time_point lastTime = timer::now();
+        duration samplingTimeout(FLAGS_fps_sp);
 
-            cv::imshow("Test", src_img);
+        size_t perfItersCounter = 0;
 
-            // -------- Step 7. Start inference --------
-            // infer_request.infer();
-            infer_request.start_async();
+        while (sources.isRunning() || graph.isRunning()) {
+            bool readData = true;
+            while (readData) {
+                auto br = graph.getBatchData(params.frameSize);
+                if (br.empty()) {
+                    break;  // IEGraph::getBatchData had nothing to process and returned. That means it was stopped
+                }
+                for (size_t i = 0; i < br.size(); i++) {
+                    // this approach waits for the next input image for sourceIdx. If provided a single image,
+                    // it may not show results, especially if -real_input_fps is enabled
+                    auto val = static_cast<unsigned int>(br[i]->sourceIdx);
+                    auto it = find_if(batchRes.begin(), batchRes.end(), [val] (const std::shared_ptr<VideoFrame>& vf) { return vf->sourceIdx == val; } );
+                    if (it != batchRes.end()) {
+                        output.push(std::move(batchRes));
+                        batchRes.clear();
+                        readData = false;
+                    }
+                    batchRes.push_back(std::move(br[i]));
+                }
+            }
+
+            if (!output.isAlive()) {
+                break;
+            }
+
+            auto currTime = timer::now();
+            auto deltaTime = (currTime - lastTime);
+            if (deltaTime >= samplingTimeout) {
+                lastTime = currTime;
+
+                if (FLAGS_show_stats) {
+                    if (++perfItersCounter >= FLAGS_n_sp) {
+                        break;
+                    }
+                }
+
+                if (FLAGS_show_stats) {
+                    std::unique_lock<std::mutex> lock(statMutex);
+                    slog::debug << "------------------- Frame # " << perfItersCounter << "------------------" << slog::endl;
+                    writeStats(slog::debug, slog::endl, sources.getStats(), graph.getStats(), output.getStats());
+                    statStream.str(std::string());
+                    writeStats(statStream, '\n', sources.getStats(), graph.getStats(), output.getStats());
+                }
+            }
         }
-
-        const int key = cv::waitKey(1);
-        if (27 == key) {  // Esc
-            exit_gracefully = true;
-            break;
-        }
-        if(exit_gracefully) {
-            break;
-        }
+        slog::info << "Metrics report:" << slog::endl;
+        metrics.logTotal();
+        slog::info << presenter.reportMeans() << slog::endl;
     }
-
-    cv::destroyAllWindows();
+    catch (const std::exception& error) {
+        slog::err << error.what() << slog::endl;
+        return 1;
+    }
+    catch (...) {
+        slog::err << "Unknown/internal exception happened." << slog::endl;
+        return 1;
+    }
+    return 0;
 }

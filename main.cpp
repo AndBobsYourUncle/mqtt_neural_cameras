@@ -48,6 +48,41 @@ const std::vector<std::string> class_names = {
     "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
     "hair drier", "toothbrush"};
 
+#include "mqtt/async_client.h"
+
+static const char mqtt_host_message[] = "Required. Specify an MQTT host url.";
+
+DEFINE_string(mh, "", mqtt_host_message);
+
+static const char mqtt_username[] = "Required. Specify an MQTT host username.";
+
+DEFINE_string(mu, "", mqtt_username);
+
+static const char mqtt_password[] = "Required. Specify an MQTT host password.";
+
+DEFINE_string(mp, "", mqtt_password);
+
+static const char mqtt_topic[] = "Required. Specify an MQTT topic.";
+
+DEFINE_string(mt, "", mqtt_topic);
+
+const int    QOS = 1;
+
+const auto PERIOD = std::chrono::seconds(5);
+
+const int MAX_BUFFERED_MSGS = 120;  // 120 * 5sec => 10min off-line buffering
+
+const std::string MQTT_CLIENT_ID { "mqtt_neural_system" };
+
+#include <nadjieb/mjpeg_streamer.hpp>
+
+// for convenience
+using MJPEGStreamer = nadjieb::MJPEGStreamer;
+
+std::vector<int> stream_params = {cv::IMWRITE_JPEG_QUALITY, 90};
+
+MJPEGStreamer streamer;
+
 // ADDED STUFF END
 
 namespace {
@@ -71,7 +106,11 @@ void parse(int argc, char *argv[]) {
                   << "\n    [-no_show]        " << no_show_message
                   << "\n    [-show_stats]     " << show_statistics
                   << "\n    [-real_input_fps] " << real_input_fps
-                  << "\n    [-u]              " << utilization_monitors_message << '\n';
+                  << "\n    [-u]              " << utilization_monitors_message
+                  << "\n    -mh               " << mqtt_host_message
+                  << "\n    -mu               " << mqtt_username
+                  << "\n    -mp               " << mqtt_password
+                  << "\n    -mt               " << mqtt_topic << '\n';
         showAvailableDevices();
         std::exit(0);
     } if (FLAGS_m.empty()) {
@@ -316,6 +355,10 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
     if (!no_show) {
         cv::imshow(params.name, windowImage);
     }
+
+    std::vector<uchar> buff_bgr;
+    cv::imencode(".jpg", windowImage, buff_bgr, stream_params);
+    streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
 }
 }  // namespace
 
@@ -327,6 +370,25 @@ int main(int argc, char* argv[]) {
         parse(argc, argv);
         const std::vector<std::string>& inputs = split(FLAGS_i, ',');
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
+
+        std::string address = FLAGS_mh;
+
+        slog::info << "Connecting to server '" << address << "'..." << slog::endl;
+
+        mqtt::async_client cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+
+        mqtt::connect_options connOpts;
+        connOpts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);
+        connOpts.set_clean_session(true);
+        connOpts.set_automatic_reconnect(true);
+        connOpts.set_user_name(FLAGS_mu);
+        connOpts.set_password(FLAGS_mp);
+
+        // Connect to the MQTT broker
+        cli.connect(connOpts)->wait();
+        slog::info << "OK" << slog::endl;
+
+        streamer.start(8080);
 
         ov::Core core;
         std::shared_ptr<ov::Model> model = core.read_model(FLAGS_m);
@@ -502,5 +564,8 @@ int main(int argc, char* argv[]) {
         slog::err << "Unknown/internal exception happened." << slog::endl;
         return 1;
     }
+
+    streamer.stop();
+
     return 0;
 }

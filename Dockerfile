@@ -62,3 +62,13 @@ WORKDIR /tmp/dependencies/mqtt_neural_system
 RUN cmake .
 
 RUN make
+
+WORKDIR /app
+
+RUN mv /tmp/dependencies/mqtt_neural_system/mqtt_neural_system ./
+
+RUN mv /tmp/dependencies/public/yolo-v3-tiny-tf/FP16/yolo-v3-tiny-tf.* ./
+
+RUN rm -rf /tmp/dependencies
+
+USER openvino

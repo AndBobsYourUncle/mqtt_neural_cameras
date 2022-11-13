@@ -50,21 +50,29 @@ const std::vector<std::string> class_names = {
 
 #include "mqtt/async_client.h"
 
-static const char mqtt_host_message[] = "Required. Specify an MQTT host url.";
+static const char stream_message[] = "Stream the live detection output as an MJPEG.";
+
+DEFINE_bool(stream, false, stream_message);
+
+static const char display_width_message[] = "Width of the output display. Default value is 800.";
+
+DEFINE_uint32(dw, 800, display_width_message);
+
+static const char display_height_message[] = "Height of the output display. Default value is 600.";
+
+DEFINE_uint32(dh, 600, display_height_message);
+
+static const char mqtt_host_message[] = "MQTT host url to publish detections.";
 
 DEFINE_string(mh, "", mqtt_host_message);
 
-static const char mqtt_username[] = "Required. Specify an MQTT host username.";
+static const char mqtt_username_message[] = "MQTT host username.";
 
-DEFINE_string(mu, "", mqtt_username);
+DEFINE_string(mu, "", mqtt_username_message);
 
-static const char mqtt_password[] = "Required. Specify an MQTT host password.";
+static const char mqtt_password_message[] = "MQTT host password.";
 
-DEFINE_string(mp, "", mqtt_password);
-
-static const char mqtt_topic[] = "Required. Specify an MQTT topic.";
-
-DEFINE_string(mt, "", mqtt_topic);
+DEFINE_string(mp, "", mqtt_password_message);
 
 const int    QOS = 1;
 
@@ -82,6 +90,8 @@ using MJPEGStreamer = nadjieb::MJPEGStreamer;
 std::vector<int> stream_params = {cv::IMWRITE_JPEG_QUALITY, 90};
 
 MJPEGStreamer streamer;
+
+#include "yaml-cpp/yaml.h"
 
 // ADDED STUFF END
 
@@ -108,10 +118,12 @@ void parse(int argc, char *argv[]) {
                   << "\n    [-real_input_fps] " << real_input_fps
                   << "\n    [-u]              " << utilization_monitors_message
 // ADDED STUFF START
-                  << "\n    -mh               " << mqtt_host_message
-                  << "\n    -mu               " << mqtt_username
-                  << "\n    -mp               " << mqtt_password
-                  << "\n    -mt               " << mqtt_topic << '\n';
+                  << "\n    [-stream]         " << display_height_message
+                  << "\n    [-dw]             " << display_width_message
+                  << "\n    [-dh]             " << display_height_message
+                  << "\n    [-mh]             " << mqtt_host_message
+                  << "\n    [-mu]             " << mqtt_username_message
+                  << "\n    [-mp]             " << mqtt_password_message << '\n';
 // ADDED STUFF END
         showAvailableDevices();
         std::exit(0);
@@ -123,6 +135,8 @@ void parse(int argc, char *argv[]) {
         throw std::runtime_error("Parameter -duplicate_num must be positive");
     } if (FLAGS_bs != 1) {
         throw std::runtime_error("Parameter -bs must be 1");
+    } if (!FLAGS_mh.empty() && FLAGS_mu.empty()) {
+        throw std::runtime_error("Parameter -mu is not set");
     }
 }
 
@@ -259,17 +273,17 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
                       colors[static_cast<int>(f.class_id)],
                       2);
 
-        // ADDED STUFF START
+// ADDED STUFF START
         int baseLine;
         cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
         cv::putText(img, label, cv::Point(f.xmin, f.ymin - labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, colors[static_cast<int>(f.class_id)], 1.5);
-        // ADDED STUFF END
+// ADDED STUFF END
     }
 }
 
-const size_t DISP_WIDTH  = 800;
-const size_t DISP_HEIGHT = 600;
+const size_t DISP_WIDTH  = 1920;
+const size_t DISP_HEIGHT = 1080;
 const size_t MAX_INPUTS  = 25;
 
 struct DisplayParams {
@@ -283,11 +297,11 @@ struct DisplayParams {
 DisplayParams prepareDisplayParams(size_t count) {
     DisplayParams params;
     params.count = count;
-    params.windowSize = cv::Size(DISP_WIDTH, DISP_HEIGHT);
+    params.windowSize = cv::Size(FLAGS_dw, FLAGS_dh);
 
     size_t gridCount = static_cast<size_t>(ceil(sqrt(count)));
-    size_t gridStepX = static_cast<size_t>(DISP_WIDTH/gridCount);
-    size_t gridStepY = static_cast<size_t>(DISP_HEIGHT/gridCount);
+    size_t gridStepX = static_cast<size_t>(FLAGS_dw/gridCount);
+    size_t gridStepY = static_cast<size_t>(FLAGS_dh/gridCount);
     if (gridStepX == 0 || gridStepY == 0) {
         throw std::logic_error("Can't display every input: there are too many of them");
     }
@@ -322,7 +336,7 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
 
     auto drawStats = [&]() {
         if (FLAGS_show_stats && !stats.empty()) {
-            static const cv::Point posPoint = cv::Point(3*DISP_WIDTH/4, 4*DISP_HEIGHT/5);
+            static const cv::Point posPoint = cv::Point(3*FLAGS_dw/4, 4*FLAGS_dh/5);
             auto pos = posPoint + cv::Point(0, 25);
             size_t currPos = 0;
             while (true) {
@@ -360,11 +374,13 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
         cv::imshow(params.name, windowImage);
     }
 
-    // ADDED STUFF START
-    std::vector<uchar> buff_bgr;
-    cv::imencode(".jpg", windowImage, buff_bgr, stream_params);
-    streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
-    // ADDED STUFF END
+// ADDED STUFF START
+    if (FLAGS_stream) {
+        std::vector<uchar> buff_bgr;
+        cv::imencode(".jpg", windowImage, buff_bgr, stream_params);
+        streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
+    }
+// ADDED STUFF END
 }
 }  // namespace
 
@@ -377,26 +393,30 @@ int main(int argc, char* argv[]) {
         const std::vector<std::string>& inputs = split(FLAGS_i, ',');
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
-        // ADDED STUFF START
-        std::string address = FLAGS_mh;
+// ADDED STUFF START
+        if (!FLAGS_mh.empty()) {
+            std::string address = FLAGS_mh;
 
-        slog::info << "Connecting to server '" << address << "'..." << slog::endl;
+            slog::info << "Connecting to server '" << address << "'..." << slog::endl;
 
-        mqtt::async_client cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+            mqtt::async_client cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
-        mqtt::connect_options connOpts;
-        connOpts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);
-        connOpts.set_clean_session(true);
-        connOpts.set_automatic_reconnect(true);
-        connOpts.set_user_name(FLAGS_mu);
-        connOpts.set_password(FLAGS_mp);
+            mqtt::connect_options connOpts;
+            connOpts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);
+            connOpts.set_clean_session(true);
+            connOpts.set_automatic_reconnect(true);
+            connOpts.set_user_name(FLAGS_mu);
+            connOpts.set_password(FLAGS_mp);
 
-        // Connect to the MQTT broker
-        cli.connect(connOpts)->wait();
-        slog::info << "OK" << slog::endl;
+            // Connect to the MQTT broker
+            cli.connect(connOpts)->wait();
+            slog::info << "OK" << slog::endl;
+        }
 
-        streamer.start(8080);
-        // ADDED STUFF END
+        if (FLAGS_stream) {
+            streamer.start(8080);
+        }
+// ADDED STUFF END
 
         ov::Core core;
         std::shared_ptr<ov::Model> model = core.read_model(FLAGS_m);
@@ -573,9 +593,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // ADDED STUFF START
-    streamer.stop();
-    // ADDED STUFF END
+// ADDED STUFF START
+    if (FLAGS_stream) {
+        streamer.stop();
+    }
+// ADDED STUFF END
 
     return 0;
 }

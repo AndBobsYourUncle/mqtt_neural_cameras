@@ -37,6 +37,13 @@ RUN git clone https://github.com/nadjieb/cpp-mjpeg-streamer.git && \
 
 WORKDIR /tmp/dependencies
 
+RUN git clone https://github.com/jbeder/yaml-cpp.git && \
+    cd /tmp/dependencies/yaml-cpp && \
+    cmake DYAML_BUILD_SHARED_LIBS=ON . && \
+    make install
+
+WORKDIR /tmp/dependencies
+
 RUN omz_downloader --name yolo-v3-tiny-tf && \
     omz_converter --name yolo-v3-tiny-tf
 

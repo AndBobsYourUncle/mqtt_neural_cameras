@@ -118,7 +118,7 @@ void parse(int argc, char *argv[]) {
                   << "\n    [-real_input_fps] " << real_input_fps
                   << "\n    [-u]              " << utilization_monitors_message
 // ADDED STUFF START
-                  << "\n    [-stream]         " << display_height_message
+                  << "\n    [-stream]         " << stream_message
                   << "\n    [-dw]             " << display_width_message
                   << "\n    [-dh]             " << display_height_message
                   << "\n    [-mh]             " << mqtt_host_message

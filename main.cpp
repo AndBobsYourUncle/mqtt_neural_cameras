@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
 
     // cap.open("http://192.168.1.52:8082");
 
-    if (!cap.open("rtsp://192.168.1.21:8554/stream")) {
+    if (!cap.open("http://192.168.1.51:8081")) {
         throw std::logic_error("Cannot open input file or camera");
     }
 
@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
         throw std::logic_error("Failed to get frame from cv::VideoCapture");
     }
 
-    cap.set(cv::CAP_PROP_BUFFERSIZE, 3);
+    cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
 
     // -------- Step 1. Initialize OpenVINO Runtime Core --------
     ov::Core core;

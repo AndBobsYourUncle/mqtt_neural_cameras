@@ -367,7 +367,7 @@ int main(int argc, char *argv[])
         //     ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
         //     infer_request.set_input_tensor(input_tensor);
 
-        //     t0 = std::chrono::high_resolution_clock::now();
+            t0 = std::chrono::high_resolution_clock::now();
 
         //     // -------- Step 7. Start inference --------
         //     // infer_request.infer();

@@ -390,7 +390,17 @@ int main(int argc, char* argv[]) {
         TbbArenaWrapper arena;
 #endif
         parse(argc, argv);
+
         const std::vector<std::string>& inputs = split(FLAGS_i, ',');
+
+// ADDED STUFF START
+        YAML::Node config;
+
+        config = YAML::LoadFile("cameras.yaml");
+
+        slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
+// ADDED STUFF END
+
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
 // ADDED STUFF START

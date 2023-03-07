@@ -109,7 +109,9 @@ void parse(int argc, char *argv[]) {
 // MODIFIED STUFF END
                   << "\n    [-loop]           " << loop_message
                   << "\n    [-duplicate_num]  " << duplication_channel_number_message
-                  << "\n     -m <path>        " << model_path_message
+// MODIFIED STUFF START
+                  //<< "\n     -m <path>        " << model_path_message
+// MODIFIED STUFF END
                   << "\n    [-d <device>]     " << target_device_message
                   << "\n    [-n_iqs]          " << input_queue_size
                   << "\n    [-fps_sp]         " << fps_sampling_period
@@ -129,9 +131,9 @@ void parse(int argc, char *argv[]) {
 // ADDED STUFF END
         showAvailableDevices();
         std::exit(0);
-    } if (FLAGS_m.empty()) {
-        throw std::runtime_error("Parameter -m is not set");
 // MODIFIED STUFF START
+    // } if (FLAGS_m.empty()) {
+    //     throw std::runtime_error("Parameter -m is not set");
     // } if (FLAGS_i.empty()) {
     //     throw std::runtime_error("Parameter -i is not set");
 // MODIFIED STUFF END
@@ -404,6 +406,8 @@ int main(int argc, char* argv[]) {
 
         config = YAML::LoadFile("./config.yaml");
 
+        std::string model = config["yolo_v3_model_path"].as<std::string>();
+
         slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
 
         inputs.clear();
@@ -445,7 +449,7 @@ int main(int argc, char* argv[]) {
 // ADDED STUFF END
 
         ov::Core core;
-        std::shared_ptr<ov::Model> model = core.read_model(FLAGS_m);
+        std::shared_ptr<ov::Model> model = core.read_model(model);
         if (model->get_parameters().size() != 1) {
             throw std::logic_error("Face Detection model must have only one input");
         }
@@ -471,7 +475,7 @@ int main(int argc, char* argv[]) {
                 colors.push_back(cv::Scalar(rand() % 256, rand() % 256, rand() % 256));
 
         std::queue<ov::InferRequest> reqQueue = compile(std::move(model),
-            FLAGS_m, FLAGS_d, roundUp(params.count, FLAGS_bs), core);
+            model, FLAGS_d, roundUp(params.count, FLAGS_bs), core);
         ov::Shape inputShape = reqQueue.front().get_input_tensor().get_shape();
         if (4 != inputShape.size()) {
             throw std::runtime_error("Invalid model input dimensions");

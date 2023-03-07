@@ -408,6 +408,8 @@ int main(int argc, char* argv[]) {
 
         const std::string model_path = config["yolo_v3_model_path"].as<std::string>();
 
+        const std::string device_type = config["device"].as<std::string>();
+
         slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
 
         inputs.clear();
@@ -475,7 +477,7 @@ int main(int argc, char* argv[]) {
                 colors.push_back(cv::Scalar(rand() % 256, rand() % 256, rand() % 256));
 
         std::queue<ov::InferRequest> reqQueue = compile(std::move(model),
-            model_path, FLAGS_d, roundUp(params.count, FLAGS_bs), core);
+            model_path, device_type, roundUp(params.count, FLAGS_bs), core);
         ov::Shape inputShape = reqQueue.front().get_input_tensor().get_shape();
         if (4 != inputShape.size()) {
             throw std::runtime_error("Invalid model input dimensions");

@@ -391,7 +391,7 @@ int main(int argc, char* argv[]) {
 #endif
         parse(argc, argv);
 
-        const std::vector<std::string>& inputs = split(FLAGS_i, ',');
+        std::vector<std::string>& inputs = split(FLAGS_i, ',');
 
 // ADDED STUFF START
         YAML::Node config;
@@ -405,7 +405,7 @@ int main(int argc, char* argv[]) {
         for (std::size_t i=0;i<config["cameras"].size();i++) {
             const YAML::Node camera = cameras[i];
 
-            *inputs.push_back(camera["input"].as<std::string>());
+            inputs.push_back(camera["input"].as<std::string>());
         }
 // ADDED STUFF END
 

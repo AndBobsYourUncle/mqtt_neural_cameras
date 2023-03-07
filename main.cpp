@@ -50,18 +50,6 @@ const std::vector<std::string> class_names = {
 
 #include "mqtt/async_client.h"
 
-static const char mqtt_host_message[] = "MQTT host url to publish detections.";
-
-DEFINE_string(mh, "", mqtt_host_message);
-
-static const char mqtt_username_message[] = "MQTT host username.";
-
-DEFINE_string(mu, "", mqtt_username_message);
-
-static const char mqtt_password_message[] = "MQTT host password.";
-
-DEFINE_string(mp, "", mqtt_password_message);
-
 const int    QOS = 1;
 
 const auto PERIOD = std::chrono::seconds(5);
@@ -111,12 +99,7 @@ void parse(int argc, char *argv[]) {
                   << "\n    [-no_show]        " << no_show_message
                   << "\n    [-show_stats]     " << show_statistics
                   << "\n    [-real_input_fps] " << real_input_fps
-                  << "\n    [-u]              " << utilization_monitors_message
-// ADDED STUFF START
-                  << "\n    [-mh]             " << mqtt_host_message
-                  << "\n    [-mu]             " << mqtt_username_message
-                  << "\n    [-mp]             " << mqtt_password_message << '\n';
-// ADDED STUFF END
+                  << "\n    [-u]              " << utilization_monitors_message << '\n';
         showAvailableDevices();
         std::exit(0);
 // MODIFIED STUFF START
@@ -129,8 +112,6 @@ void parse(int argc, char *argv[]) {
         throw std::runtime_error("Parameter -duplicate_num must be positive");
     } if (FLAGS_bs != 1) {
         throw std::runtime_error("Parameter -bs must be 1");
-    } if (!FLAGS_mh.empty() && FLAGS_mu.empty()) {
-        throw std::runtime_error("Parameter -mu is not set");
     }
 
 // ADDED STUFF START
@@ -400,6 +381,10 @@ int main(int argc, char* argv[]) {
 
         const std::string device_type = config["device"].as<std::string>();
 
+        const std::string mqtt_host = config["mqtt_host"].as<std::string>();
+        const std::string mqtt_user = config["mqtt_user"].as<std::string>();
+        const std::string mqtt_password = config["mqtt_password"].as<std::string>();
+
         slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
 
         inputs.clear();
@@ -416,8 +401,8 @@ int main(int argc, char* argv[]) {
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
 // ADDED STUFF START
-        if (!FLAGS_mh.empty()) {
-            std::string address = FLAGS_mh;
+        if (!mqtt_host.empty()) {
+            std::string address = mqtt_host;
 
             slog::info << "Connecting to server '" << address << "'..." << slog::endl;
 
@@ -427,8 +412,8 @@ int main(int argc, char* argv[]) {
             connOpts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);
             connOpts.set_clean_session(true);
             connOpts.set_automatic_reconnect(true);
-            connOpts.set_user_name(FLAGS_mu);
-            connOpts.set_password(FLAGS_mp);
+            connOpts.set_user_name(mqtt_user);
+            connOpts.set_password(mqtt_password);
 
             // Connect to the MQTT broker
             cli.connect(connOpts)->wait();

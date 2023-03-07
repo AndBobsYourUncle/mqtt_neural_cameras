@@ -54,14 +54,6 @@ static const char stream_message[] = "Stream the live detection output as an MJP
 
 DEFINE_bool(stream, false, stream_message);
 
-static const char display_width_message[] = "Width of the output display. Default value is 800.";
-
-DEFINE_uint32(dw, 800, display_width_message);
-
-static const char display_height_message[] = "Height of the output display. Default value is 600.";
-
-DEFINE_uint32(dh, 600, display_height_message);
-
 static const char mqtt_host_message[] = "MQTT host url to publish detections.";
 
 DEFINE_string(mh, "", mqtt_host_message);
@@ -126,8 +118,6 @@ void parse(int argc, char *argv[]) {
                   << "\n    [-u]              " << utilization_monitors_message
 // ADDED STUFF START
                   << "\n    [-stream]         " << stream_message
-                  << "\n    [-dw]             " << display_width_message
-                  << "\n    [-dh]             " << display_height_message
                   << "\n    [-mh]             " << mqtt_host_message
                   << "\n    [-mu]             " << mqtt_username_message
                   << "\n    [-mp]             " << mqtt_password_message << '\n';
@@ -310,11 +300,11 @@ struct DisplayParams {
 DisplayParams prepareDisplayParams(size_t count) {
     DisplayParams params;
     params.count = count;
-    params.windowSize = cv::Size(FLAGS_dw, FLAGS_dh);
+    params.windowSize = cv::Size(DISP_WIDTH, DISP_HEIGHT);
 
     size_t gridCount = static_cast<size_t>(ceil(sqrt(count)));
-    size_t gridStepX = static_cast<size_t>(FLAGS_dw/gridCount);
-    size_t gridStepY = static_cast<size_t>(FLAGS_dh/gridCount);
+    size_t gridStepX = static_cast<size_t>(DISP_WIDTH/gridCount);
+    size_t gridStepY = static_cast<size_t>(DISP_HEIGHT/gridCount);
     if (gridStepX == 0 || gridStepY == 0) {
         throw std::logic_error("Can't display every input: there are too many of them");
     }
@@ -349,7 +339,7 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
 
     auto drawStats = [&]() {
         if (FLAGS_show_stats && !stats.empty()) {
-            static const cv::Point posPoint = cv::Point(3*FLAGS_dw/4, 4*FLAGS_dh/5);
+            static const cv::Point posPoint = cv::Point(3*DISP_WIDTH/4, 4*DISP_HEIGHT/5);
             auto pos = posPoint + cv::Point(0, 25);
             size_t currPos = 0;
             while (true) {

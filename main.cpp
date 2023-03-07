@@ -399,6 +399,12 @@ int main(int argc, char* argv[]) {
         config = YAML::LoadFile("./cameras.yaml");
 
         slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
+
+        inputs.clear();
+
+        for (std::size_t i=0;i<num_cameras;i++) {
+            inputs.push_back(camera["input"].as<std::string>());
+        }
 // ADDED STUFF END
 
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);

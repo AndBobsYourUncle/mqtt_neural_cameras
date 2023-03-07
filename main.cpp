@@ -402,7 +402,9 @@ int main(int argc, char* argv[]) {
 
         inputs.clear();
 
-        for (std::size_t i=0;i<num_cameras;i++) {
+        for (std::size_t i=0;i<config["cameras"].size();i++) {
+            const YAML::Node camera = cameras[i];
+
             inputs.push_back(camera["input"].as<std::string>());
         }
 // ADDED STUFF END

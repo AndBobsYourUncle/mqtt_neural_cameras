@@ -360,19 +360,19 @@ int main(int argc, char *argv[])
 
             // std::vector<float> padd;
             // cv::Mat boxed = letterbox(src_img, img_h, img_w, padd);
-            // boxed = letterbox(src_img, img_h, img_w, padd);
+        //     boxed = letterbox(src_img, img_h, img_w, padd);
 
-            // // -------- Step 6. Set input --------
-            // boxed.convertTo(boxed, CV_32FC3);
-            // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
-            // infer_request.set_input_tensor(input_tensor);
+        //     // -------- Step 6. Set input --------
+        //     boxed.convertTo(boxed, CV_32FC3);
+        //     ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
+        //     infer_request.set_input_tensor(input_tensor);
 
-            // t0 = std::chrono::high_resolution_clock::now();
+        //     t0 = std::chrono::high_resolution_clock::now();
 
-            // // -------- Step 7. Start inference --------
-            // // infer_request.infer();
-            // infer_request.start_async();
-        }
+        //     // -------- Step 7. Start inference --------
+        //     // infer_request.infer();
+        //     infer_request.start_async();
+        // }
 
         const int key = cv::waitKey(1);
         if (27 == key) {  // Esc

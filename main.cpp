@@ -104,7 +104,9 @@ void parse(int argc, char *argv[]) {
     slog::info << ov::get_openvino_version() << slog::endl;
     if (FLAGS_h || argc == 1) {
         std::cout << "\n    [-h]              " << help_message
-                  << "\n     -i               " << input_message
+// MODIFIED STUFF START
+                  //<< "\n     -i               " << input_message
+// MODIFIED STUFF END
                   << "\n    [-loop]           " << loop_message
                   << "\n    [-duplicate_num]  " << duplication_channel_number_message
                   << "\n     -m <path>        " << model_path_message
@@ -129,8 +131,10 @@ void parse(int argc, char *argv[]) {
         std::exit(0);
     } if (FLAGS_m.empty()) {
         throw std::runtime_error("Parameter -m is not set");
-    } if (FLAGS_i.empty()) {
-        throw std::runtime_error("Parameter -i is not set");
+// MODIFIED STUFF START
+    // } if (FLAGS_i.empty()) {
+    //     throw std::runtime_error("Parameter -i is not set");
+// MODIFIED STUFF END
     } if (FLAGS_duplicate_num == 0) {
         throw std::runtime_error("Parameter -duplicate_num must be positive");
     } if (FLAGS_bs != 1) {
@@ -391,8 +395,9 @@ int main(int argc, char* argv[]) {
 #endif
         parse(argc, argv);
 
+        // MODIFIED LINE FOR NON-CONST
         // const std::vector<std::string>& inputs = split(FLAGS_i, ',');
-        std::vector<std::string> inputs = split(FLAGS_i, ',');
+        std::vector<std::string> inputs;
 
 // ADDED STUFF START
         YAML::Node config;

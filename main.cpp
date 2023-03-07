@@ -402,7 +402,7 @@ int main(int argc, char* argv[]) {
 // ADDED STUFF START
         YAML::Node config;
 
-        config = YAML::LoadFile("./cameras.yaml");
+        config = YAML::LoadFile("./config.yaml");
 
         slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
 

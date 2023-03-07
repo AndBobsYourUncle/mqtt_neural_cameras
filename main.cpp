@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
 
     // cap.open("http://192.168.1.52:8082");
 
-    if (!cap.open("http://192.168.1.52:8081")) {
+    if (!cap.open("http://192.168.1.51:8081")) {
         throw std::logic_error("Cannot open input file or camera");
     }
 

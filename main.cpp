@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
         throw std::logic_error("Failed to get frame from cv::VideoCapture");
     }
 
-    cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
+    // cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
 
     // -------- Step 1. Initialize OpenVINO Runtime Core --------
     ov::Core core;

@@ -285,8 +285,8 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     }
 }
 
-const size_t DISP_WIDTH  = 1920;
-const size_t DISP_HEIGHT = 1080;
+const size_t DISP_WIDTH  = 1024;
+const size_t DISP_HEIGHT = 768;
 const size_t MAX_INPUTS  = 25;
 
 struct DisplayParams {

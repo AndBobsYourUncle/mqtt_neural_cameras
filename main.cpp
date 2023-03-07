@@ -102,35 +102,31 @@ DEFINE_double(t, 0.5, threshold_message);
 void parse(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, false);
     slog::info << ov::get_openvino_version() << slog::endl;
-    if (FLAGS_h || argc == 1) {
-        std::cout << "\n    [-h]              " << help_message
-// MODIFIED STUFF START
-                  //<< "\n     -i               " << input_message
-// MODIFIED STUFF END
-                  << "\n    [-loop]           " << loop_message
-                  << "\n    [-duplicate_num]  " << duplication_channel_number_message
-// MODIFIED STUFF START
-                  //<< "\n     -m <path>        " << model_path_message
-// MODIFIED STUFF END
-                  << "\n    [-d <device>]     " << target_device_message
-                  << "\n    [-n_iqs]          " << input_queue_size
-                  << "\n    [-fps_sp]         " << fps_sampling_period
-                  << "\n    [-n_sp]           " << num_sampling_periods
-                  << "\n    [-t]              " << threshold_message
-                  << "\n    [-no_show]        " << no_show_message
-                  << "\n    [-show_stats]     " << show_statistics
-                  << "\n    [-real_input_fps] " << real_input_fps
-                  << "\n    [-u]              " << utilization_monitors_message
-// ADDED STUFF START
-                  << "\n    [-stream]         " << stream_message
-                  << "\n    [-dw]             " << display_width_message
-                  << "\n    [-dh]             " << display_height_message
-                  << "\n    [-mh]             " << mqtt_host_message
-                  << "\n    [-mu]             " << mqtt_username_message
-                  << "\n    [-mp]             " << mqtt_password_message << '\n';
-// ADDED STUFF END
+    // if (FLAGS_h || argc == 1) {
+    //     std::cout << "\n    [-h]              " << help_message
+    //               << "\n     -i               " << input_message
+    //               << "\n    [-loop]           " << loop_message
+    //               << "\n    [-duplicate_num]  " << duplication_channel_number_message
+    //               << "\n     -m <path>        " << model_path_message
+    //               << "\n    [-d <device>]     " << target_device_message
+    //               << "\n    [-n_iqs]          " << input_queue_size
+    //               << "\n    [-fps_sp]         " << fps_sampling_period
+    //               << "\n    [-n_sp]           " << num_sampling_periods
+    //               << "\n    [-t]              " << threshold_message
+    //               << "\n    [-no_show]        " << no_show_message
+    //               << "\n    [-show_stats]     " << show_statistics
+    //               << "\n    [-real_input_fps] " << real_input_fps
+    //               << "\n    [-u]              " << utilization_monitors_message
+// // ADDED STUFF START
+//                   << "\n    [-stream]         " << stream_message
+//                   << "\n    [-dw]             " << display_width_message
+//                   << "\n    [-dh]             " << display_height_message
+//                   << "\n    [-mh]             " << mqtt_host_message
+//                   << "\n    [-mu]             " << mqtt_username_message
+//                   << "\n    [-mp]             " << mqtt_password_message << '\n';
+// // ADDED STUFF END
         showAvailableDevices();
-        std::exit(0);
+        // std::exit(0);
 // MODIFIED STUFF START
     // } if (FLAGS_m.empty()) {
     //     throw std::runtime_error("Parameter -m is not set");

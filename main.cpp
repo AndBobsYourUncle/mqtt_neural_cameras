@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
 
     const std::string model_path = "../yolov7/yolov7-tiny.onnx";
 
-    const std::string device_name = "CPU";
+    const std::string device_name = "MYRIAD";
 
     cv::VideoCapture cap;
     cv::Mat src_img;
@@ -235,6 +235,8 @@ int main(int argc, char *argv[])
     if (!cap.read(src_img)) {
         throw std::logic_error("Failed to get frame from cv::VideoCapture");
     }
+
+    cap.set(CV_CAP_PROP_BUFFERSIZE, 3);
 
     // -------- Step 1. Initialize OpenVINO Runtime Core --------
     ov::Core core;

@@ -391,7 +391,7 @@ int main(int argc, char* argv[]) {
 #endif
         parse(argc, argv);
 
-        std::vector<std::string>& inputs = split(FLAGS_i, ',');
+        const std::vector<std::string>& inputs = split(FLAGS_i, ',');
 
 // ADDED STUFF START
         YAML::Node config;

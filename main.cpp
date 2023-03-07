@@ -391,6 +391,7 @@ int main(int argc, char* argv[]) {
 #endif
         parse(argc, argv);
 
+        // const std::vector<std::string>& inputs = split(FLAGS_i, ',');
         std::vector<std::string> inputs = split(FLAGS_i, ',');
 
 // ADDED STUFF START

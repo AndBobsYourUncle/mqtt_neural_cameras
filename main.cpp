@@ -50,10 +50,6 @@ const std::vector<std::string> class_names = {
 
 #include "mqtt/async_client.h"
 
-static const char stream_message[] = "Stream the live detection output as an MJPEG.";
-
-DEFINE_bool(stream, false, stream_message);
-
 static const char mqtt_host_message[] = "MQTT host url to publish detections.";
 
 DEFINE_string(mh, "", mqtt_host_message);
@@ -117,7 +113,6 @@ void parse(int argc, char *argv[]) {
                   << "\n    [-real_input_fps] " << real_input_fps
                   << "\n    [-u]              " << utilization_monitors_message
 // ADDED STUFF START
-                  << "\n    [-stream]         " << stream_message
                   << "\n    [-mh]             " << mqtt_host_message
                   << "\n    [-mu]             " << mqtt_username_message
                   << "\n    [-mp]             " << mqtt_password_message << '\n';
@@ -378,11 +373,9 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
     }
 
 // ADDED STUFF START
-    if (FLAGS_stream) {
-        std::vector<uchar> buff_bgr;
-        cv::imencode(".jpg", windowImage, buff_bgr, stream_params);
-        streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
-    }
+    std::vector<uchar> buff_bgr;
+    cv::imencode(".jpg", windowImage, buff_bgr, stream_params);
+    streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
 // ADDED STUFF END
 }
 }  // namespace
@@ -442,9 +435,7 @@ int main(int argc, char* argv[]) {
             slog::info << "OK" << slog::endl;
         }
 
-        if (FLAGS_stream) {
-            streamer.start(8080);
-        }
+        streamer.start(8080);
 // ADDED STUFF END
 
         ov::Core core;
@@ -623,9 +614,7 @@ int main(int argc, char* argv[]) {
     }
 
 // ADDED STUFF START
-    if (FLAGS_stream) {
-        streamer.stop();
-    }
+    streamer.stop();
 // ADDED STUFF END
 
     return 0;

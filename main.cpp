@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
 
     const std::string model_path = "../yolov7/yolov7-tiny.onnx";
 
-    const std::string device_name = "MYRIAD";
+    const std::string device_name = "CPU";
 
     cv::VideoCapture cap;
     cv::Mat src_img;

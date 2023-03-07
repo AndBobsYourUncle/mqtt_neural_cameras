@@ -147,6 +147,10 @@ void parse(int argc, char *argv[]) {
     } if (!FLAGS_mh.empty() && FLAGS_mu.empty()) {
         throw std::runtime_error("Parameter -mu is not set");
     }
+
+// ADDED STUFF START
+    showAvailableDevices();
+// ADDED STUFF END
 }
 
 static int EntryIndex(int side, int lcoords, int lclasses, int location, int entry) {

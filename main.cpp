@@ -236,6 +236,11 @@ void parseYOLOOutput(ov::Tensor tensor,
     }
 }
 
+// ADDED STUFF START
+std::vector<std::string> camera_names;
+std::vector<std::string> tracked_classes;
+// ADDED STUFF END
+
 void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors,
                     mqtt::async_client_ptr mqtt_cli) {
 // ADDED STUFF START
@@ -285,11 +290,6 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     }
 // ADDED STUFF END
 }
-
-// ADDED STUFF START
-std::vector<std::string> camera_names;
-std::vector<std::string> tracked_classes;
-// ADDED STUFF END
 
 const size_t DISP_WIDTH  = 1024;
 const size_t DISP_HEIGHT = 768;

@@ -3,6 +3,8 @@ device: MYRIAD
 mqtt_host: tcp://192.168.1.51:1883
 mqtt_user: MQTT_USER
 mqtt_password: MQTT_PASSWORD
+tracked_classes:
+  - person
 cameras:
   - name: Front Door
     input: http://192.168.1.51:8081

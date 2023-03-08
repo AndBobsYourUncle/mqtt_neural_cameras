@@ -431,7 +431,7 @@ int main(int argc, char* argv[]) {
             connOpts.set_password(mqtt_password);
 
             // Connect to the MQTT broker
-            mqtt_cli.connect(connOpts)->wait();
+            mqtt_cli->connect(connOpts)->wait();
             slog::info << "OK" << slog::endl;
         }
 

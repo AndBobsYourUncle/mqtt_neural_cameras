@@ -242,7 +242,8 @@ std::vector<std::string> tracked_classes;
 // ADDED STUFF END
 
 void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors,
-                    mqtt::async_client_ptr mqtt_cli) {
+                    mqtt::async_client_ptr mqtt_cli,
+                    std::string camera_slug) {
 // ADDED STUFF START
     std::map<std::string, float> highest_confidence;
 // ADDED STUFF END
@@ -288,6 +289,18 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     {
        std::cout << p.first << '\t' << p.second << std::endl;
     }
+
+    std::string cameraName = slugify(camera_names[i]);
+
+    std::transform(camera_slug.begin(), camera_slug.end(), camera_slug.begin(),
+        [](unsigned char c){ return std::tolower(c); });
+
+    int baseLine;
+    cv::Size camera_slug_size = cv::getTextSize(camera_slug, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
+
+    cv::putText(windowPart, cameraName,
+        cv::Point(params.frameSize.width - camera_slug_size.width*2, 0 + camera_slug_size.height*2),
+        cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
 // ADDED STUFF END
 }
 
@@ -340,21 +353,7 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
             cv::Rect rectFrame = cv::Rect(params.points[i], params.frameSize);
             cv::Mat windowPart = windowImage(rectFrame);
             cv::resize(elem->frame, windowPart, params.frameSize);
-            drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors, mqtt_cli);
-
-// ADDED STUFF START
-            std::string cameraName = slugify(camera_names[i]);
-
-            std::transform(cameraName.begin(), cameraName.end(), cameraName.begin(),
-                [](unsigned char c){ return std::tolower(c); });
-
-            int baseLine;
-            cv::Size cameraNameSize = cv::getTextSize(cameraName, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
-
-            cv::putText(windowPart, cameraName,
-                cv::Point(params.frameSize.width - cameraNameSize.width*2, 0 + cameraNameSize.height*2),
-                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
-// ADDED STUFF END
+            drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors, mqtt_cli, camera_names[i]);
         }
     };
 

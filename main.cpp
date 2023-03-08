@@ -432,7 +432,7 @@ int main(int argc, char* argv[]) {
         const std::string mqtt_user = config["mqtt_user"].as<std::string>();
         const std::string mqtt_password = config["mqtt_password"].as<std::string>();
 
-        tracked_classes = config["tracked_classes"].as<std::vector<std::string>>();
+        // tracked_classes = config["tracked_classes"].as<std::vector<std::string>>();
 
         slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
 

@@ -264,7 +264,6 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
 // ADDED STUFF START
 std::vector<std::string> camera_names;
-std::vector<std::string> tracked_classes;
 // ADDED STUFF END
 
 const size_t DISP_WIDTH  = 1024;
@@ -343,12 +342,9 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
                     std::transform(label.begin(), label.end(), label.begin(),
                         [](unsigned char c){ return std::tolower(c); });
 
-                    // if (std::find(tracked_classes.begin(), tracked_classes.end(), label) != tracked_classes.end())
-                    // {
-                        if (f.confidence > highest_confidence[label]) {
-                            highest_confidence[label] = f.confidence;
-                        }
-                    // }
+                    if (f.confidence > highest_confidence[label]) {
+                        highest_confidence[label] = f.confidence;
+                    }
                 }
             }
 
@@ -432,8 +428,6 @@ int main(int argc, char* argv[]) {
         const std::string mqtt_user = config["mqtt_user"].as<std::string>();
         const std::string mqtt_password = config["mqtt_password"].as<std::string>();
 
-        // tracked_classes = config["tracked_classes"].as<std::vector<std::string>>();
-
         slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
 
         inputs.clear();
@@ -453,6 +447,8 @@ int main(int argc, char* argv[]) {
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
 // ADDED STUFF START
+        // mqtt::async_client mqtt_cli(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+
         auto mqtt_cli = std::make_shared<mqtt::async_client>(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
         if (!mqtt_host.empty()) {

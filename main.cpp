@@ -326,7 +326,9 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
             int baseLine;
             cv::Size cameraNameSize = cv::getTextSize(cameraName, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
-            cv::putText(windowPart, cameraName, cv::Point(params.frameSize.width - labelSize.width*2, 0 + labelSize.height*2), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
+            cv::putText(windowPart, cameraName,
+                cv::Point(params.frameSize.width - cameraNameSize.width*2, 0 + cameraNameSize.height*2),
+                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
 
             std::map<std::string, float> highest_confidence;
 

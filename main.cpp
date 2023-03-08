@@ -317,6 +317,7 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
 
             std::string label = camera_names[i];
 
+            int baseLine;
             cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
             cv::putText(windowPart, label, cv::Point(0, 0 - labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);

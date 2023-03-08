@@ -320,7 +320,7 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
             int baseLine;
             cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
-            cv::putText(windowPart, label, cv::Point(params.frameSize.width - labelSize.width, 0 + labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
+            cv::putText(windowPart, label, cv::Point(params.frameSize.width - labelSize.width*2, 0 + labelSize.height*2), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
         }
     };
 

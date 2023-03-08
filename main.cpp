@@ -419,9 +419,7 @@ int main(int argc, char* argv[]) {
 
 // ADDED STUFF START
         if (!mqtt_host.empty()) {
-            std::string address = mqtt_host;
-
-            slog::info << "Connecting to server '" << address << "'..." << slog::endl;
+            slog::info << "Connecting to server '" << mqtt_host << "'..." << slog::endl;
 
             mqtt::connect_options connOpts;
             connOpts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);

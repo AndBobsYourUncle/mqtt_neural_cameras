@@ -261,6 +261,10 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     }
 }
 
+// ADDED STUFF START
+std::vector<std::string> camera_names;
+// ADDED STUFF END
+
 const size_t DISP_WIDTH  = 1024;
 const size_t DISP_HEIGHT = 768;
 const size_t MAX_INPUTS  = 25;
@@ -310,6 +314,12 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
             cv::Mat windowPart = windowImage(rectFrame);
             cv::resize(elem->frame, windowPart, params.frameSize);
             drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors);
+
+            std::string label = camera_names[i];
+
+            cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
+
+            cv::putText(windowPart, label, cv::Point(0, 0 - labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
         }
     };
 
@@ -394,7 +404,10 @@ int main(int argc, char* argv[]) {
 
             std::string camera_input = camera["input"].as<std::string>();
 
+            std::string camera_name = camera["name"].as<std::string>();
+
             inputs.push_back(camera_input);
+            camera_names.push_back(camera_name);
         }
 // ADDED STUFF END
 

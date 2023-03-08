@@ -299,7 +299,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     cv::Size camera_name_size = cv::getTextSize(camera_name, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
     cv::putText(img, camera_name,
-        cv::Point(image.shape.width - camera_name_size.width*2, 0 + camera_name_size.height*2),
+        cv::Point(img.shape.width - camera_name_size.width*2, 0 + camera_name_size.height*2),
         cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
 // ADDED STUFF END
 }

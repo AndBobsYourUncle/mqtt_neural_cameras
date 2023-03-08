@@ -415,15 +415,13 @@ int main(int argc, char* argv[]) {
 
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
-        mqtt::async_client mqtt_cli;
+        mqtt_cli = cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
 // ADDED STUFF START
         if (!mqtt_host.empty()) {
             std::string address = mqtt_host;
 
             slog::info << "Connecting to server '" << address << "'..." << slog::endl;
-
-            mqtt_cli = cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
             mqtt::connect_options connOpts;
             connOpts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);

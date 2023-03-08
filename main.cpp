@@ -306,7 +306,7 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
                      Presenter& presenter,
                      PerformanceMetrics& metrics,
                      bool no_show,
-                     mqtt::async_client mqtt_cli) {
+                     auto mqtt_cli) {
     cv::Mat windowImage = cv::Mat::zeros(params.windowSize, CV_8UC3);
     auto loopBody = [&](size_t i) {
         auto& elem = data[i];

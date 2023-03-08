@@ -1,4 +1,4 @@
-yolo_v3_model_path: ./public/yolo-v3-tiny-tf/FP16/yolo-v3-tiny-tf.xml
+yolo_v3_model_path: ../public/yolo-v3-tiny-tf/FP16/yolo-v3-tiny-tf.xml
 device: MYRIAD
 mqtt_host: tcp://192.168.1.51:1883
 mqtt_user: MQTT_USER

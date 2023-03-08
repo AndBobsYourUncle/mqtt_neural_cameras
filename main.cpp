@@ -343,12 +343,12 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
                     std::transform(label.begin(), label.end(), label.begin(),
                         [](unsigned char c){ return std::tolower(c); });
 
-                    if (std::find(tracked_classes.begin(), tracked_classes.end(), label) != tracked_classes.end())
-                    {
+                    // if (std::find(tracked_classes.begin(), tracked_classes.end(), label) != tracked_classes.end())
+                    // {
                         if (f.confidence > highest_confidence[label]) {
                             highest_confidence[label] = f.confidence;
                         }
-                    }
+                    // }
                 }
             }
 

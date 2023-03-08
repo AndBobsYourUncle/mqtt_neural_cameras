@@ -347,6 +347,11 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
                     }
                 }
             }
+
+            for ( const auto &p : highest_confidence )
+            {
+               std::cout << p.first << '\t' << p.second << std::endl;
+            }
 // ADDED STUFF END
         }
     };

@@ -236,13 +236,30 @@ void parseYOLOOutput(ov::Tensor tensor,
     }
 }
 
-void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors) {
+void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors,
+                    mqtt::async_client_ptr mqtt_cli) {
+// ADDED STUFF START
+    std::map<std::string, float> highest_confidence;
+// ADDED STUFF END
+
     for (const DetectionObject& f : detections) {
         std::string label = cv::format("%.2f", f.confidence);
         if (!class_names.empty())
         {
             CV_Assert(f.class_id < (int)class_names.size());
             label = class_names[f.class_id] + ": " + label;
+
+            std:string class_slug = slugify(class_names[f.class_id]);
+
+            std::transform(class_slug.begin(), class_slug.end(), class_slug.begin(),
+                [](unsigned char c){ return std::tolower(c); });
+
+            if (std::find(tracked_classes.begin(), tracked_classes.end(), class_slug) != tracked_classes.end())
+            {
+                if (f.confidence > highest_confidence[class_slug]) {
+                    highest_confidence[class_slug] = f.confidence;
+                }
+            }
         }
 
         cv::rectangle(img,
@@ -260,6 +277,13 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
         cv::putText(img, label, cv::Point(f.xmin, f.ymin - labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, colors[static_cast<int>(f.class_id)], 1.5);
 // ADDED STUFF END
     }
+
+// ADDED STUFF START
+    for ( const auto &p : highest_confidence )
+    {
+       std::cout << p.first << '\t' << p.second << std::endl;
+    }
+// ADDED STUFF END
 }
 
 // ADDED STUFF START
@@ -316,7 +340,7 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
             cv::Rect rectFrame = cv::Rect(params.points[i], params.frameSize);
             cv::Mat windowPart = windowImage(rectFrame);
             cv::resize(elem->frame, windowPart, params.frameSize);
-            drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors);
+            drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors, mqtt_cli);
 
 // ADDED STUFF START
             std::string cameraName = slugify(camera_names[i]);
@@ -330,32 +354,6 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
             cv::putText(windowPart, cameraName,
                 cv::Point(params.frameSize.width - cameraNameSize.width*2, 0 + cameraNameSize.height*2),
                 cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
-
-            std::map<std::string, float> highest_confidence;
-
-            for (const DetectionObject& f : elem->detections.get<std::vector<DetectionObject>>()) {
-                std::string label = cv::format("%.2f", f.confidence);
-                if (!class_names.empty())
-                {
-                    CV_Assert(f.class_id < (int)class_names.size());
-                    label = slugify(class_names[f.class_id]);
-
-                    std::transform(label.begin(), label.end(), label.begin(),
-                        [](unsigned char c){ return std::tolower(c); });
-
-                    if (std::find(tracked_classes.begin(), tracked_classes.end(), label) != tracked_classes.end())
-                    {
-                        if (f.confidence > highest_confidence[label]) {
-                            highest_confidence[label] = f.confidence;
-                        }
-                    }
-                }
-            }
-
-            for ( const auto &p : highest_confidence )
-            {
-               std::cout << p.first << '\t' << p.second << std::endl;
-            }
 // ADDED STUFF END
         }
     };

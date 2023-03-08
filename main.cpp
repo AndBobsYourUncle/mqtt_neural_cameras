@@ -306,7 +306,7 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
                      Presenter& presenter,
                      PerformanceMetrics& metrics,
                      bool no_show,
-                     auto mqtt_cli) {
+                     mqtt::async_client_ptr mqtt_cli) {
     cv::Mat windowImage = cv::Mat::zeros(params.windowSize, CV_8UC3);
     auto loopBody = [&](size_t i) {
         auto& elem = data[i];
@@ -415,9 +415,11 @@ int main(int argc, char* argv[]) {
 
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
-        mqtt::async_client mqtt_cli(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
-
 // ADDED STUFF START
+        // mqtt::async_client mqtt_cli(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+
+        auto mqtt_cli = std::make_shared<mqtt::async_client>(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+
         if (!mqtt_host.empty()) {
             slog::info << "Connecting to server '" << mqtt_host << "'..." << slog::endl;
 

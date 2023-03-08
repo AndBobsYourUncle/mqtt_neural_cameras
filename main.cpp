@@ -305,7 +305,8 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
                      const std::vector<cv::Scalar> &colors,
                      Presenter& presenter,
                      PerformanceMetrics& metrics,
-                     bool no_show) {
+                     bool no_show,
+                     mqtt::async_client mqtt_cli) {
     cv::Mat windowImage = cv::Mat::zeros(params.windowSize, CV_8UC3);
     auto loopBody = [&](size_t i) {
         auto& elem = data[i];
@@ -414,13 +415,15 @@ int main(int argc, char* argv[]) {
 
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
+        mqtt::async_client mqtt_cli;
+
 // ADDED STUFF START
         if (!mqtt_host.empty()) {
             std::string address = mqtt_host;
 
             slog::info << "Connecting to server '" << address << "'..." << slog::endl;
 
-            mqtt::async_client cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+            mqtt_cli = cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
             mqtt::connect_options connOpts;
             connOpts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);
@@ -537,7 +540,7 @@ int main(int argc, char* argv[]) {
                 std::unique_lock<std::mutex> lock(statMutex);
                 str = statStream.str();
             }
-            displayNSources(result, str, params, colors, presenter, metrics, FLAGS_no_show);
+            displayNSources(result, str, params, colors, presenter, metrics, FLAGS_no_show, mqtt_cli);
             int key = cv::waitKey(1);
             presenter.handleKey(key);
 

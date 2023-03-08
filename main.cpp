@@ -36,6 +36,7 @@
 #include "graph.hpp"
 
 // ADDED STUFF START
+#include "slugify.hpp";
 
 const std::vector<std::string> class_names = {
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -316,12 +317,17 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
             cv::resize(elem->frame, windowPart, params.frameSize);
             drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors);
 
-            std::string label = camera_names[i];
+// ADDED STUFF START
+            std::string label = slugify(camera_names[i]);
+
+            std::transform(label.begin(), label.end(), label.begin(),
+                [](unsigned char c){ return std::tolower(c); });
 
             int baseLine;
             cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
             cv::putText(windowPart, label, cv::Point(params.frameSize.width - labelSize.width*2, 0 + labelSize.height*2), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
+// ADDED STUFF END
         }
     };
 

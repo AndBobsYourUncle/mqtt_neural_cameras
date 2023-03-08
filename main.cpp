@@ -249,7 +249,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
             CV_Assert(f.class_id < (int)class_names.size());
             label = class_names[f.class_id] + ": " + label;
 
-            std:string class_slug = slugify(class_names[f.class_id]);
+            std::string class_slug = slugify(class_names[f.class_id]);
 
             std::transform(class_slug.begin(), class_slug.end(), class_slug.begin(),
                 [](unsigned char c){ return std::tolower(c); });

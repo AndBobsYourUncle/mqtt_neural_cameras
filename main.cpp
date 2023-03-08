@@ -243,7 +243,7 @@ std::vector<std::string> tracked_classes;
 
 void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors,
                     mqtt::async_client_ptr mqtt_cli,
-                    std::string camera_slug) {
+                    std::string camera_name) {
 // ADDED STUFF START
     std::map<std::string, float> highest_confidence;
 // ADDED STUFF END
@@ -290,16 +290,16 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
        std::cout << p.first << '\t' << p.second << std::endl;
     }
 
-    std::string cameraName = slugify(camera_names[i]);
+    std::string camera_slug = slugify(camera_name);
 
     std::transform(camera_slug.begin(), camera_slug.end(), camera_slug.begin(),
         [](unsigned char c){ return std::tolower(c); });
 
     int baseLine;
-    cv::Size camera_slug_size = cv::getTextSize(camera_slug, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
+    cv::Size camera_name_size = cv::getTextSize(camera_name, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 
-    cv::putText(windowPart, cameraName,
-        cv::Point(params.frameSize.width - camera_slug_size.width*2, 0 + camera_slug_size.height*2),
+    cv::putText(windowPart, camera_name,
+        cv::Point(params.frameSize.width - camera_name_size.width*2, 0 + camera_name_size.height*2),
         cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
 // ADDED STUFF END
 }

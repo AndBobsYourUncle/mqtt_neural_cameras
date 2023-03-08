@@ -415,7 +415,7 @@ int main(int argc, char* argv[]) {
 
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
-        mqtt_cli = cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+        mqtt::async_client mqtt_cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
 // ADDED STUFF START
         if (!mqtt_host.empty()) {

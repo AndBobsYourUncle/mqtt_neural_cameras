@@ -328,6 +328,16 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
         mqtt_cli->publish(area_msg);
     }
 
+    auto time_now = std::chrono::high_resolution_clock::now();
+
+    ms time_since_last_zero = std::chrono::duration_cast<ms>(time_now - last_zero_sent[camera_slug]);
+
+    if ( ms.count() > 1000 ) {
+        std::cout << camera_slug << "\t" << "zeroing" << std::endl;
+
+        last_zero_sent[camera_slug] = std::chrono::high_resolution_clock::now();
+    }
+
     int baseLine;
     cv::Size camera_name_size = cv::getTextSize(camera_name, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
 

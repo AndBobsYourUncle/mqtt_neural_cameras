@@ -252,6 +252,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
                     std::string camera_name) {
 // ADDED STUFF START
     std::map<std::string, float> highest_confidence;
+    std::map<std::string, float> highest_area;
 // ADDED STUFF END
 
     for (const DetectionObject& f : detections) {
@@ -270,6 +271,12 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
             {
                 if (f.confidence > highest_confidence[class_slug]) {
                     highest_confidence[class_slug] = f.confidence;
+                }
+
+                float area = (f.xmax-f.xmin) * (f.ymax-f.ymin);
+
+                if ( area > highest_area[class_slug] ) {
+                    highest_area[class_slug] = area;
                 }
             }
         }
@@ -298,24 +305,25 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
     for ( const auto &p : highest_confidence )
     {
-        std::cout << p.first << '\t' << p.second << std::endl;
+        std::cout camera_slug << "\t" << p.first << '\t' << p.second << std::endl;
 
         std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
 
-        std::ostringstream ss;
-        ss << p.second;
+        std::ostringstream cstr;
+        cstr << p.second;
 
-        mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, ss.str());
+        mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, cstr.str());
         confidence_msg->set_qos(QOS);
         mqtt_cli->publish(confidence_msg);
 
-        // mqtt::topic::ptr_t topic = mqtt::topic::create(mqtt_cli, "mqtt_neural_system/status", QOS, false);
+        std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
 
-        // topic.publish(std::move("ON"));
-        // mqtt_cli->publish("mqtt_neural_system/status", char_json, data, qos, false);
-        // mqtt::message_ptr pubmsg = mqtt::make_message("mqtt_neural_system/status", "online");
-        // pubmsg->set_qos(QOS);
-        // mqtt_cli->publish(pubmsg);
+        std::ostringstream astr;
+        astr << highest_area[p.first];
+
+        mqtt::message_ptr area_msg = mqtt::make_message(area_topic, astr.str());
+        area_msg->set_qos(QOS);
+        mqtt_cli->publish(area_msg);
     }
 
     int baseLine;

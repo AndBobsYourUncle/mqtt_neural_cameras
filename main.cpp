@@ -287,7 +287,11 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 // ADDED STUFF START
     for ( const auto &p : highest_confidence )
     {
-       std::cout << p.first << '\t' << p.second << std::endl;
+        std::cout << p.first << '\t' << p.second << std::endl;
+
+        topic = mqtt::topic::create(mqtt_cli, "mqtt_neural_system/status", QOS, false);
+
+        topic.publish(std::move("ON"));
     }
 
     std::string camera_slug = slugify(camera_name);
@@ -430,6 +434,10 @@ int main(int argc, char* argv[]) {
         const std::string mqtt_password = config["mqtt_password"].as<std::string>();
 
         tracked_classes = config["tracked_classes"].as<std::vector<std::string>>();
+
+        if (config["cameras"].size()) == 0 {
+            throw std::runtime_error("At least one camera configuration is required");
+        }
 
         slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
 

@@ -245,6 +245,8 @@ void parseYOLOOutput(ov::Tensor tensor,
 // ADDED STUFF START
 std::vector<std::string> camera_names;
 std::vector<std::string> tracked_classes;
+
+std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> last_zero_sent;
 // ADDED STUFF END
 
 void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors,

@@ -487,7 +487,12 @@ int main(int argc, char* argv[]) {
             connOpts.set_user_name(mqtt_user);
             connOpts.set_password(mqtt_password);
 
-            connOpts.will_options(mqtt::message(STATUS_TOPIC, STATUS_OFFLINE, QOS));
+            mqtt::will_options lwt;
+
+            lwt.set_topic(STATUS_TOPIC);
+            lwt.set_payload(STATUS_OFFLINE);
+
+            connOpts.set_will(lwt);
 
             // Connect to the MQTT broker
             mqtt_cli->connect(connOpts)->wait();

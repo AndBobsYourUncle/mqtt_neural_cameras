@@ -273,11 +273,11 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
                     highest_confidence[class_slug] = f.confidence;
                 }
 
-                float area = (f.xmax-f.xmin) * (f.ymax-f.ymin);
+                // float area = (f.xmax-f.xmin) * (f.ymax-f.ymin);
 
-                if ( area > highest_area[class_slug] ) {
-                    highest_area[class_slug] = area;
-                }
+                // if ( area > highest_area[class_slug] ) {
+                //     highest_area[class_slug] = area;
+                // }
             }
         }
 

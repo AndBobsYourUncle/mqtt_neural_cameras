@@ -334,9 +334,21 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     ms time_since_last_zero = std::chrono::duration_cast<ms>(time_now - last_zero_sent[camera_slug]);
 
     if ( time_since_last_zero.count() > 1000 ) {
-        std::cout << camera_slug << "\t" << "zeroing" << std::endl;
-
         last_zero_sent[camera_slug] = std::chrono::high_resolution_clock::now();
+
+        for (auto & tracked_class : tracked_classes) {
+            if ( highest_confidence[tracked_class] == 0 ) {
+                std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
+                mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, "0");
+                confidence_msg->set_qos(QOS);
+                mqtt_cli->publish(confidence_msg);
+
+                std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
+                mqtt::message_ptr area_msg = mqtt::make_message(area_topic, "0");
+                area_msg->set_qos(QOS);
+                mqtt_cli->publish(area_msg);
+            }
+        }
     }
 
     int baseLine;

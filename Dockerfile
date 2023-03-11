@@ -1,16 +1,46 @@
-FROM openvino/ubuntu20_dev
+FROM openvino/ubuntu20_dev:2022.1.0
 
 USER root
 
-WORKDIR /tmp/dependencies
-
-RUN apt-get update && \
+RUN apt-get update; \
+    apt-get install pkg-config -y --no-install-recommends; \
     apt-get install -y --no-install-recommends \
+        git \
+        wget \
         build-essential gcc make cmake cmake-gui cmake-curses-gui \
         libssl-dev \
         libgflags-dev \
-        ffmpeg && \
-    rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
+        ffmpeg \
+        libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavresample-dev \
+        libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+        libdc1394-22-dev \
+        libgtk2.0-dev libgtk-3-dev gnome-devel \
+        libcanberra-gtk-module libcanberra-gtk3-module && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV NO_AT_BRIDGE=1
+
+USER openvino
+
+WORKDIR /home/openvino
+
+RUN git clone https://github.com/opencv/opencv.git
+
+RUN git -C opencv checkout 4.x
+
+RUN mkdir -p opencv_build
+
+WORKDIR /home/openvino/opencv_build
+
+RUN cmake ../opencv
+
+RUN make -j4
+
+USER root
+
+RUN make install
+
+WORKDIR /tmp/dependencies
 
 RUN git clone https://github.com/eclipse/paho.mqtt.c.git && \
     cd /tmp/dependencies/paho.mqtt.c && \
@@ -44,20 +74,37 @@ RUN git clone https://github.com/jbeder/yaml-cpp.git && \
 
 WORKDIR /tmp/dependencies
 
+USER openvino
+
+WORKDIR /home/openvino
+
+RUN git clone https://github.com/WongKinYiu/yolov7.git
+
+WORKDIR /home/openvino/yolov7
+
+RUN wget https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7-tiny.pt
+
+RUN pip3 install -r requirements.txt
+
+RUN python3 export.py --fp16 --weights yolov7-tiny.pt
+
+WORKDIR /home/openvino
+
 RUN omz_downloader --name yolo-v3-tiny-tf && \
     omz_converter --name yolo-v3-tiny-tf
 
-WORKDIR /tmp/dependencies
+RUN git clone https://github.com/AndBobsYourUncle/mqtt_neural_system.git
 
-RUN git clone https://github.com/AndBobsYourUncle/mqtt_neural_system.git && \
-    cd /tmp/dependencies/mqtt_neural_system && \
-    cmake . && \
-    make
+WORKDIR /home/openvino/mqtt_neural_system
 
-WORKDIR /app
+RUN git checkout finish
 
-RUN mv /tmp/dependencies/mqtt_neural_system/mqtt_neural_system ./ && \
-    mv /tmp/dependencies/public/yolo-v3-tiny-tf/FP16/yolo-v3-tiny-tf.* ./ && \
-    rm -rf /tmp/dependencies
+RUN cmake . && make
+
+USER root
+
+RUN apt-get update; \
+    apt-get install nano -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 USER openvino

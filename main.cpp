@@ -468,6 +468,8 @@ int main(int argc, char* argv[]) {
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
 // ADDED STUFF START
+        mqtt::async_client_ptr mqtt_cli;
+
         mqtt_cli = std::make_shared<mqtt::async_client>(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
         if (!mqtt_host.empty()) {

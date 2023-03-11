@@ -662,14 +662,10 @@ int main(int argc, char* argv[]) {
         slog::info << presenter.reportMeans() << slog::endl;
     }
     catch (const std::exception& error) {
-        mqtt_cli->publish(status_ofline_msg);
-
         slog::err << error.what() << slog::endl;
         return 1;
     }
     catch (...) {
-        mqtt_cli->publish(status_ofline_msg);
-
         slog::err << "Unknown/internal exception happened." << slog::endl;
         return 1;
     }

@@ -424,8 +424,8 @@ int main(int argc, char* argv[]) {
 
     mqtt::message_ptr status_online_msg = mqtt::make_message(STATUS_TOPIC, STATUS_ONLINE);
     status_online_msg->set_qos(QOS);
-    mqtt::message_ptr status_ofline_msg = mqtt::make_message(STATUS_TOPIC, STATUS_OFFLINE);
-    status_ofline_msg->set_qos(QOS);
+    mqtt::message_ptr status_offline_msg = mqtt::make_message(STATUS_TOPIC, STATUS_OFFLINE);
+    status_offline_msg->set_qos(QOS);
 
     try {
 #if USE_TBB
@@ -672,7 +672,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    mqtt_cli->publish(status_ofline_msg);
+    slog::info << "Going down..." << slog::endl;
+    mqtt_cli->publish(status_offline_msg);
 
 // ADDED STUFF START
     streamer.stop();

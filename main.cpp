@@ -59,6 +59,12 @@ const int MAX_BUFFERED_MSGS = 120;  // 120 * 5sec => 10min off-line buffering
 
 const std::string MQTT_CLIENT_ID { "mqtt_neural_system" };
 
+const std::string STATUS_TOPIC { "mqtt_neural_system/status" };
+
+const std::string STATUS_ONLINE { "online" };
+
+const std::string STATUS_OFFLINE { "offline" };
+
 #include <nadjieb/mjpeg_streamer.hpp>
 
 // for convenience
@@ -293,9 +299,9 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
         // topic.publish(std::move("ON"));
         // mqtt_cli->publish("mqtt_neural_system/status", char_json, data, qos, false);
-        mqtt::message_ptr pubmsg = mqtt::make_message("mqtt_neural_system/status", "online");
-        pubmsg->set_qos(QOS);
-        mqtt_cli->publish(pubmsg);
+        // mqtt::message_ptr pubmsg = mqtt::make_message("mqtt_neural_system/status", "online");
+        // pubmsg->set_qos(QOS);
+        // mqtt_cli->publish(pubmsg);
     }
 
     std::string camera_slug = slugify(camera_name);
@@ -599,6 +605,13 @@ int main(int argc, char* argv[]) {
 
         size_t perfItersCounter = 0;
 
+        mqtt::message_ptr status_online_msg = mqtt::make_message(STATUS_TOPIC, STATUS_ONLINE);
+        status_online_msg->set_qos(QOS);
+        mqtt::message_ptr status_ofline_msg = mqtt::make_message(STATUS_TOPIC, STATUS_OFFLINE);
+        status_ofline_msg->set_qos(QOS);
+
+        mqtt_cli->publish(status_online_msg);
+
         while (sources.isRunning() || graph.isRunning()) {
             bool readData = true;
             while (readData) {
@@ -649,13 +662,19 @@ int main(int argc, char* argv[]) {
         slog::info << presenter.reportMeans() << slog::endl;
     }
     catch (const std::exception& error) {
+        mqtt_cli->publish(status_ofline_msg);
+
         slog::err << error.what() << slog::endl;
         return 1;
     }
     catch (...) {
+        mqtt_cli->publish(status_ofline_msg);
+
         slog::err << "Unknown/internal exception happened." << slog::endl;
         return 1;
     }
+
+    mqtt_cli->publish(status_ofline_msg);
 
 // ADDED STUFF START
     streamer.stop();

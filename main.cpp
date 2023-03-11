@@ -304,7 +304,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
         mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, to_string(p.second));
         confidence_msg->set_qos(QOS);
-        mqtt_cli->publish(status_online_msg);
+        mqtt_cli->publish(confidence_msg);
 
         // mqtt::topic::ptr_t topic = mqtt::topic::create(mqtt_cli, "mqtt_neural_system/status", QOS, false);
 

@@ -291,9 +291,20 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     }
 
 // ADDED STUFF START
+    std::string camera_slug = slugify(camera_name);
+
+    std::transform(camera_slug.begin(), camera_slug.end(), camera_slug.begin(),
+        [](unsigned char c){ return std::tolower(c); });
+
     for ( const auto &p : highest_confidence )
     {
         std::cout << p.first << '\t' << p.second << std::endl;
+
+        std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
+
+        mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, to_string(p.second));
+        confidence_msg->set_qos(QOS);
+        mqtt_cli->publish(status_online_msg);
 
         // mqtt::topic::ptr_t topic = mqtt::topic::create(mqtt_cli, "mqtt_neural_system/status", QOS, false);
 
@@ -303,11 +314,6 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
         // pubmsg->set_qos(QOS);
         // mqtt_cli->publish(pubmsg);
     }
-
-    std::string camera_slug = slugify(camera_name);
-
-    std::transform(camera_slug.begin(), camera_slug.end(), camera_slug.begin(),
-        [](unsigned char c){ return std::tolower(c); });
 
     int baseLine;
     cv::Size camera_name_size = cv::getTextSize(camera_name, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);

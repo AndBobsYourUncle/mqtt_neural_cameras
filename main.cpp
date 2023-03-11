@@ -338,12 +338,12 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
         for (auto & tracked_class : tracked_classes) {
             if ( highest_confidence[tracked_class] == 0 ) {
-                std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
+                std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+tracked_class+"/confidence";
                 mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, "0");
                 confidence_msg->set_qos(QOS);
                 mqtt_cli->publish(confidence_msg);
 
-                std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
+                std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+tracked_class+"/area";
                 mqtt::message_ptr area_msg = mqtt::make_message(area_topic, "0");
                 area_msg->set_qos(QOS);
                 mqtt_cli->publish(area_msg);

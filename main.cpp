@@ -289,9 +289,13 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     {
         std::cout << p.first << '\t' << p.second << std::endl;
 
-        mqtt::topic::ptr_t topic = mqtt::topic::create(mqtt_cli, "mqtt_neural_system/status", QOS, false);
+        // mqtt::topic::ptr_t topic = mqtt::topic::create(mqtt_cli, "mqtt_neural_system/status", QOS, false);
 
-        topic.publish(std::move("ON"));
+        // topic.publish(std::move("ON"));
+        // mqtt_cli->publish("mqtt_neural_system/status", char_json, data, qos, false);
+        mqtt::message_ptr pubmsg = mqtt::make_message("mqtt_neural_system/status", "online");
+        pubmsg->set_qos(QOS);
+        mqtt_cli->publish(pubmsg);
     }
 
     std::string camera_slug = slugify(camera_name);

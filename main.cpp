@@ -252,7 +252,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
                     std::string camera_name) {
 // ADDED STUFF START
     std::map<std::string, float> highest_confidence;
-    // std::map<std::string, float> highest_area;
+    std::map<std::string, float> highest_area;
 // ADDED STUFF END
 
     for (const DetectionObject& f : detections) {
@@ -273,11 +273,11 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
                     highest_confidence[class_slug] = f.confidence;
                 }
 
-                // float area = (f.xmax-f.xmin) * (f.ymax-f.ymin);
+                float area = (f.xmax-f.xmin) * (f.ymax-f.ymin);
 
-                // if ( area > highest_area[class_slug] ) {
-                //     highest_area[class_slug] = area;
-                // }
+                if ( area > highest_area[class_slug] ) {
+                    highest_area[class_slug] = area;
+                }
             }
         }
 
@@ -305,7 +305,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
     for ( const auto &p : highest_confidence )
     {
-        std::cout camera_slug << "\t" << p.first << '\t' << p.second << std::endl;
+        std::cout << camera_slug << "\t" << p.first << '\t' << p.second << std::endl;
 
         std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
 
@@ -316,14 +316,14 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
         confidence_msg->set_qos(QOS);
         mqtt_cli->publish(confidence_msg);
 
-        // std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
+        std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
 
-        // std::ostringstream astr;
-        // astr << highest_area[p.first];
+        std::ostringstream astr;
+        astr << highest_area[p.first];
 
-        // mqtt::message_ptr area_msg = mqtt::make_message(area_topic, astr.str());
-        // area_msg->set_qos(QOS);
-        // mqtt_cli->publish(area_msg);
+        mqtt::message_ptr area_msg = mqtt::make_message(area_topic, astr.str());
+        area_msg->set_qos(QOS);
+        mqtt_cli->publish(area_msg);
     }
 
     int baseLine;

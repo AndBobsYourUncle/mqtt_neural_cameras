@@ -422,6 +422,11 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
 int main(int argc, char* argv[]) {
     mqtt::async_client_ptr mqtt_cli;
 
+    mqtt::message_ptr status_online_msg = mqtt::make_message(STATUS_TOPIC, STATUS_ONLINE);
+    status_online_msg->set_qos(QOS);
+    mqtt::message_ptr status_ofline_msg = mqtt::make_message(STATUS_TOPIC, STATUS_OFFLINE);
+    status_ofline_msg->set_qos(QOS);
+
     try {
 #if USE_TBB
         TbbArenaWrapper arena;
@@ -606,11 +611,6 @@ int main(int argc, char* argv[]) {
         duration samplingTimeout(FLAGS_fps_sp);
 
         size_t perfItersCounter = 0;
-
-        mqtt::message_ptr status_online_msg = mqtt::make_message(STATUS_TOPIC, STATUS_ONLINE);
-        status_online_msg->set_qos(QOS);
-        mqtt::message_ptr status_ofline_msg = mqtt::make_message(STATUS_TOPIC, STATUS_OFFLINE);
-        status_ofline_msg->set_qos(QOS);
 
         mqtt_cli->publish(status_online_msg);
 

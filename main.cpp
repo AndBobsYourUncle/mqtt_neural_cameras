@@ -289,7 +289,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     {
         std::cout << p.first << '\t' << p.second << std::endl;
 
-        topic = mqtt::topic::create(mqtt_cli, "mqtt_neural_system/status", QOS, false);
+        mqtt::topic::ptr_t topic = mqtt::topic::create(mqtt_cli, "mqtt_neural_system/status", QOS, false);
 
         topic.publish(std::move("ON"));
     }

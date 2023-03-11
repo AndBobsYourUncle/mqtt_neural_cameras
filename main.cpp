@@ -69,6 +69,7 @@ const std::string STATUS_OFFLINE { "offline" };
 
 // for convenience
 using MJPEGStreamer = nadjieb::MJPEGStreamer;
+using namespace std::chrono;
 
 std::vector<int> stream_params = {cv::IMWRITE_JPEG_QUALITY, 90};
 

@@ -252,7 +252,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
                     std::string camera_name) {
 // ADDED STUFF START
     std::map<std::string, float> highest_confidence;
-    std::map<std::string, float> highest_area;
+    // std::map<std::string, float> highest_area;
 // ADDED STUFF END
 
     for (const DetectionObject& f : detections) {

@@ -108,3 +108,5 @@ RUN apt-get update; \
     rm -rf /var/lib/apt/lists/*
 
 USER openvino
+
+CMD [ "/bin/bash", "-c", "/home/openvino/mqtt_neural_system/start_neural_security_system.sh" ]

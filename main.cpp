@@ -61,9 +61,9 @@ const std::string MQTT_CLIENT_ID { "mqtt_neural_system" };
 
 const std::string STATUS_TOPIC { "mqtt_neural_system/status" };
 
-const std::string STATUS_ONLINE { "online" };
+const std::string STATUS_ONLINE { "ON" };
 
-const std::string STATUS_OFFLINE { "offline" };
+const std::string STATUS_OFFLINE { "OFF" };
 
 #include <nadjieb/mjpeg_streamer.hpp>
 

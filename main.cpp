@@ -309,21 +309,21 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
         std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
 
-        std::ostringstream cstr;
-        cstr << p.second;
+        std::ostringstream ss;
+        ss << p.second;
 
-        mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, cstr.str());
+        mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, ss.str());
         confidence_msg->set_qos(QOS);
         mqtt_cli->publish(confidence_msg);
 
-        std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
+        // std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
 
-        std::ostringstream astr;
-        astr << highest_area[p.first];
+        // std::ostringstream astr;
+        // astr << highest_area[p.first];
 
-        mqtt::message_ptr area_msg = mqtt::make_message(area_topic, astr.str());
-        area_msg->set_qos(QOS);
-        mqtt_cli->publish(area_msg);
+        // mqtt::message_ptr area_msg = mqtt::make_message(area_topic, astr.str());
+        // area_msg->set_qos(QOS);
+        // mqtt_cli->publish(area_msg);
     }
 
     int baseLine;

@@ -420,6 +420,8 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
 }  // namespace
 
 int main(int argc, char* argv[]) {
+    mqtt::async_client_ptr mqtt_cli;
+
     try {
 #if USE_TBB
         TbbArenaWrapper arena;
@@ -468,7 +470,7 @@ int main(int argc, char* argv[]) {
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
 // ADDED STUFF START
-        auto mqtt_cli = std::make_shared<mqtt::async_client>(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+        mqtt_cli = std::make_shared<mqtt::async_client>(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
         if (!mqtt_host.empty()) {
             slog::info << "Connecting to server '" << mqtt_host << "'..." << slog::endl;

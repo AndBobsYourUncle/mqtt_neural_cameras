@@ -12,4 +12,6 @@ signalListener() {
     done
 }
 
+yq -P e /data/options.json | tee config.yaml >/dev/null
+
 signalListener ./mqtt_neural_system --real_input_fps --no_show

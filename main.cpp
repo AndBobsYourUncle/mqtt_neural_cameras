@@ -69,6 +69,7 @@ const std::string STATUS_OFFLINE { "offline" };
 
 // for convenience
 using MJPEGStreamer = nadjieb::MJPEGStreamer;
+typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
 
 std::vector<int> stream_params = {cv::IMWRITE_JPEG_QUALITY, 90};
 
@@ -330,7 +331,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
     auto time_now = std::chrono::high_resolution_clock::now();
 
-    std::chrono::ms time_since_last_zero = std::chrono::duration_cast<std::chrono::ms>(time_now - last_zero_sent[camera_slug]);
+    ms time_since_last_zero = std::chrono::duration_cast<ms>(time_now - last_zero_sent[camera_slug]);
 
     if ( time_since_last_zero.count() > 1000 ) {
         std::cout << camera_slug << "\t" << "zeroing" << std::endl;

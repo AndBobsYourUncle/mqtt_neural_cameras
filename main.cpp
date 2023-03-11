@@ -302,7 +302,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
         std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
 
-        mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, to_string(p.second));
+        mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, p.second.str());
         confidence_msg->set_qos(QOS);
         mqtt_cli->publish(confidence_msg);
 

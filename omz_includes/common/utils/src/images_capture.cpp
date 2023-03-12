@@ -170,6 +170,7 @@ public:
         }
         if (cap.open(input)) {
             std::cout << "VideoCapWrapper: " << input << std::endl;
+            cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
 
             this->readLengthLimit = readLengthLimit;
             if (!cap.set(cv::CAP_PROP_POS_FRAMES, this->initialImageId))
@@ -309,18 +310,17 @@ std::unique_ptr<ImagesCapture> openImagesCapture(const std::string& input,
     }
 
     try {
-        return std::unique_ptr<ImagesCapture>(
-            new CameraCapWrapper{input, loop, type, readLengthLimit, cameraResolution});
-    } catch (const InvalidInput& e) { invalidInputs.push_back(e.what()); } catch (const OpenError& e) {
-        openErrors.push_back(e.what());
-    }
-
-    try {
         return std::unique_ptr<ImagesCapture>(new VideoCapWrapper{input, loop, type, initialImageId, readLengthLimit});
     } catch (const InvalidInput& e) { invalidInputs.push_back(e.what()); } catch (const OpenError& e) {
         openErrors.push_back(e.what());
     }
 
+    try {
+        return std::unique_ptr<ImagesCapture>(
+            new CameraCapWrapper{input, loop, type, readLengthLimit, cameraResolution});
+    } catch (const InvalidInput& e) { invalidInputs.push_back(e.what()); } catch (const OpenError& e) {
+        openErrors.push_back(e.what());
+    }
 
     std::vector<std::string> errorMessages = openErrors.empty() ? invalidInputs : openErrors;
     std::string errorsInfo;

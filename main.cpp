@@ -248,6 +248,8 @@ std::vector<std::string> camera_names;
 std::vector<std::string> tracked_classes;
 
 std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> last_zero_sent;
+
+double detection_threshold;
 // ADDED STUFF END
 
 void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors,
@@ -485,7 +487,7 @@ int main(int argc, char* argv[]) {
 
         tracked_classes = config["tracked_classes"].as<std::vector<std::string>>();
 
-        const double detection_threshold = config["detection_threshold"].as<double>();
+        detection_threshold = config["detection_threshold"].as<double>();
 
         if (config["cameras"].size() == 0 ) {
             throw std::runtime_error("At least one camera configuration is required");

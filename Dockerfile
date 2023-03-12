@@ -22,25 +22,16 @@ RUN apt-get update; \
 
 ENV NO_AT_BRIDGE=1
 
-USER openvino
+WORKDIR /tmp/dependencies
 
-WORKDIR /home/openvino
-
-RUN git clone https://github.com/opencv/opencv.git
-
-RUN git -C opencv checkout 4.x
-
-RUN mkdir -p opencv_build
-
-WORKDIR /home/openvino/opencv_build
-
-RUN cmake ../opencv
-
-RUN make -j4
-
-USER root
-
-RUN make install
+RUN git clone https://github.com/opencv/opencv.git && \
+    cd opencv && \
+    git checkout 4.x && \
+    mkdir opencv_build && \
+    cd opencv_build && \
+    cmake ../ && \
+    make -j4 && \
+    make install
 
 WORKDIR /tmp/dependencies
 
@@ -74,28 +65,16 @@ RUN git clone https://github.com/jbeder/yaml-cpp.git && \
     cmake DYAML_BUILD_SHARED_LIBS=ON . && \
     make install
 
-WORKDIR /tmp/dependencies
+WORKDIR /tmp
+
+RUN rm -r /tmp/dependencies
 
 USER openvino
 
 WORKDIR /home/openvino
 
-RUN git clone https://github.com/WongKinYiu/yolov7.git
-
-WORKDIR /home/openvino/yolov7
-
-RUN wget https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7-tiny.pt
-
-RUN pip3 install -r requirements.txt
-
-RUN python3 export.py --fp16 --weights yolov7-tiny.pt
-
-WORKDIR /home/openvino
-
 RUN omz_downloader --name yolo-v3-tiny-tf && \
     omz_converter --name yolo-v3-tiny-tf
-
-ARG CACHEBUST=1
 
 RUN git clone https://github.com/AndBobsYourUncle/mqtt_neural_cameras.git && \
     cd mqtt_neural_cameras && \
@@ -107,4 +86,4 @@ USER root
 
 RUN chmod +x /home/openvino/mqtt_neural_system/start_mqtt_neural_cameras.sh
 
-CMD [ "/bin/bash", "-c", "/home/openvino/mqtt_neural_system/start_mqtt_neural_cameras.sh" ]
+CMD [ "/bin/bash", "-c", "/home/openvino/mqtt_neural_cameras/start_mqtt_neural_cameras.sh" ]

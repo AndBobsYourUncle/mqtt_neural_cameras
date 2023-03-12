@@ -26,10 +26,26 @@ After creating your `options.yaml` file, you can then run this application using
 
 ```shell
 docker run -u root:root --rm --device /dev/dri --device-cgroup-rule='c 189:* rmw' \
-  -v /dev/bus/usb:/dev/bus/usb -v /path/to/config.yaml:/data -p 8085:8080 andbobsyouruncle/amd64-mqtt-neural-cameras:0.0.1
+  -v /dev/bus/usb:/dev/bus/usb -v /path/containing/config_json_file:/data \
+  -p 8085:8080 andbobsyouruncle/amd64-mqtt-neural-cameras:0.0.1
 ```
 
 This gives the Docker container access to the GPU or a connected Neural Compute Stick 2, if one is connected to the host machine. Only certain Intel GPUs are compatible (as this is using Intel's OpenVINO SDK), as well as Intel CPUs.
 
 Running this with the "CPU" device at least once will output which other devices have been detected as available. For example, you might see "MYRIAD" if a Neural Compute Stick 2 was detected as plugged into the host's USB port, or "GPU", if a compatible Intel GPU is present.
 
+For example, here is the start of the output when running with "CPU" as the device:
+
+```shell
+[ INFO ] OpenVINO
+[ INFO ]  version: 2022.1.0
+[ INFO ]  build: 2022.1.0-7019-cdb9bec7210-releases/2022/1
+[E:] [BSL] found 0 ioexpander device
+Available devices: CPU GNA GPU MYRIAD
+```
+
+This is letting you know that "CPU", "GNA", "GPU", and "MYRIAD" are the available devices that were detected. You can then use any of these in your `options.json` file.
+
+## Usage
+
+TBD

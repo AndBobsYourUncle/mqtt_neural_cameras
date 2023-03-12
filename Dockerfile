@@ -103,7 +103,7 @@ WORKDIR /home/openvino/mqtt_neural_system
 
 RUN git checkout finish && cmake . && make
 
-USER openvino
+USER root
 
 RUN chmod +x /home/openvino/mqtt_neural_system/start_neural_security_system.sh
 

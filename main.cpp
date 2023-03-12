@@ -36,6 +36,7 @@
 #include "graph.hpp"
 
 // ADDED STUFF START
+#include "slugify.hpp"
 
 const std::vector<std::string> class_names = {
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -50,30 +51,6 @@ const std::vector<std::string> class_names = {
 
 #include "mqtt/async_client.h"
 
-static const char stream_message[] = "Stream the live detection output as an MJPEG.";
-
-DEFINE_bool(stream, false, stream_message);
-
-static const char display_width_message[] = "Width of the output display. Default value is 800.";
-
-DEFINE_uint32(dw, 800, display_width_message);
-
-static const char display_height_message[] = "Height of the output display. Default value is 600.";
-
-DEFINE_uint32(dh, 600, display_height_message);
-
-static const char mqtt_host_message[] = "MQTT host url to publish detections.";
-
-DEFINE_string(mh, "", mqtt_host_message);
-
-static const char mqtt_username_message[] = "MQTT host username.";
-
-DEFINE_string(mu, "", mqtt_username_message);
-
-static const char mqtt_password_message[] = "MQTT host password.";
-
-DEFINE_string(mp, "", mqtt_password_message);
-
 const int    QOS = 1;
 
 const auto PERIOD = std::chrono::seconds(5);
@@ -82,10 +59,17 @@ const int MAX_BUFFERED_MSGS = 120;  // 120 * 5sec => 10min off-line buffering
 
 const std::string MQTT_CLIENT_ID { "mqtt_neural_system" };
 
+const std::string STATUS_TOPIC { "mqtt_neural_system/status" };
+
+const std::string STATUS_ONLINE { "ON" };
+
+const std::string STATUS_OFFLINE { "OFF" };
+
 #include <nadjieb/mjpeg_streamer.hpp>
 
 // for convenience
 using MJPEGStreamer = nadjieb::MJPEGStreamer;
+typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
 
 std::vector<int> stream_params = {cv::IMWRITE_JPEG_QUALITY, 90};
 
@@ -102,12 +86,19 @@ DEFINE_double(t, 0.5, threshold_message);
 void parse(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, false);
     slog::info << ov::get_openvino_version() << slog::endl;
-    if (FLAGS_h || argc == 1) {
+// MODIFIED STUFF START
+    // if (FLAGS_h || argc == 1) {
+    if (FLAGS_h) {
+// MODIFIED STUFF END
         std::cout << "\n    [-h]              " << help_message
-                  << "\n     -i               " << input_message
+// MODIFIED STUFF START
+                  //<< "\n     -i               " << input_message
+// MODIFIED STUFF END
                   << "\n    [-loop]           " << loop_message
                   << "\n    [-duplicate_num]  " << duplication_channel_number_message
-                  << "\n     -m <path>        " << model_path_message
+// MODIFIED STUFF START
+                  //<< "\n     -m <path>        " << model_path_message
+// MODIFIED STUFF END
                   << "\n    [-d <device>]     " << target_device_message
                   << "\n    [-n_iqs]          " << input_queue_size
                   << "\n    [-fps_sp]         " << fps_sampling_period
@@ -116,28 +107,24 @@ void parse(int argc, char *argv[]) {
                   << "\n    [-no_show]        " << no_show_message
                   << "\n    [-show_stats]     " << show_statistics
                   << "\n    [-real_input_fps] " << real_input_fps
-                  << "\n    [-u]              " << utilization_monitors_message
-// ADDED STUFF START
-                  << "\n    [-stream]         " << stream_message
-                  << "\n    [-dw]             " << display_width_message
-                  << "\n    [-dh]             " << display_height_message
-                  << "\n    [-mh]             " << mqtt_host_message
-                  << "\n    [-mu]             " << mqtt_username_message
-                  << "\n    [-mp]             " << mqtt_password_message << '\n';
-// ADDED STUFF END
+                  << "\n    [-u]              " << utilization_monitors_message << '\n';
         showAvailableDevices();
         std::exit(0);
-    } if (FLAGS_m.empty()) {
-        throw std::runtime_error("Parameter -m is not set");
-    } if (FLAGS_i.empty()) {
-        throw std::runtime_error("Parameter -i is not set");
+// MODIFIED STUFF START
+    // } if (FLAGS_m.empty()) {
+    //     throw std::runtime_error("Parameter -m is not set");
+    // } if (FLAGS_i.empty()) {
+    //     throw std::runtime_error("Parameter -i is not set");
+// MODIFIED STUFF END
     } if (FLAGS_duplicate_num == 0) {
         throw std::runtime_error("Parameter -duplicate_num must be positive");
     } if (FLAGS_bs != 1) {
         throw std::runtime_error("Parameter -bs must be 1");
-    } if (!FLAGS_mh.empty() && FLAGS_mu.empty()) {
-        throw std::runtime_error("Parameter -mu is not set");
     }
+
+// ADDED STUFF START
+    showAvailableDevices();
+// ADDED STUFF END
 }
 
 static int EntryIndex(int side, int lcoords, int lclasses, int location, int entry) {
@@ -256,13 +243,47 @@ void parseYOLOOutput(ov::Tensor tensor,
     }
 }
 
-void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors) {
+// ADDED STUFF START
+std::vector<std::string> camera_names;
+std::vector<std::string> tracked_classes;
+
+std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> last_zero_sent;
+
+double detection_threshold;
+// ADDED STUFF END
+
+void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections, const std::vector<cv::Scalar>& colors,
+                    mqtt::async_client_ptr mqtt_cli,
+                    std::string camera_name) {
+// ADDED STUFF START
+    std::map<std::string, float> highest_confidence;
+    std::map<std::string, float> highest_area;
+// ADDED STUFF END
+
     for (const DetectionObject& f : detections) {
         std::string label = cv::format("%.2f", f.confidence);
         if (!class_names.empty())
         {
             CV_Assert(f.class_id < (int)class_names.size());
             label = class_names[f.class_id] + ": " + label;
+
+            std::string class_slug = slugify(class_names[f.class_id]);
+
+            std::transform(class_slug.begin(), class_slug.end(), class_slug.begin(),
+                [](unsigned char c){ return std::tolower(c); });
+
+            if (std::find(tracked_classes.begin(), tracked_classes.end(), class_slug) != tracked_classes.end())
+            {
+                if (f.confidence > highest_confidence[class_slug]) {
+                    highest_confidence[class_slug] = f.confidence;
+                }
+
+                float area = (f.xmax-f.xmin) * (f.ymax-f.ymin);
+
+                if ( area > highest_area[class_slug] ) {
+                    highest_area[class_slug] = area;
+                }
+            }
         }
 
         cv::rectangle(img,
@@ -280,10 +301,69 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
         cv::putText(img, label, cv::Point(f.xmin, f.ymin - labelSize.height), cv::FONT_HERSHEY_SIMPLEX, 0.5, colors[static_cast<int>(f.class_id)], 1.5);
 // ADDED STUFF END
     }
+
+// ADDED STUFF START
+    std::string camera_slug = slugify(camera_name);
+
+    std::transform(camera_slug.begin(), camera_slug.end(), camera_slug.begin(),
+        [](unsigned char c){ return std::tolower(c); });
+
+    for ( const auto &p : highest_confidence )
+    {
+        // std::cout << camera_slug << "\t" << p.first << '\t' << p.second << "\t" << highest_area[p.first] << std::endl;
+
+        std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
+
+        std::ostringstream ss;
+        ss << p.second;
+
+        mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, ss.str());
+        confidence_msg->set_qos(QOS);
+        mqtt_cli->publish(confidence_msg);
+
+        std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
+
+        std::ostringstream astr;
+        astr << highest_area[p.first];
+
+        mqtt::message_ptr area_msg = mqtt::make_message(area_topic, astr.str());
+        area_msg->set_qos(QOS);
+        mqtt_cli->publish(area_msg);
+    }
+
+    auto time_now = std::chrono::high_resolution_clock::now();
+
+    ms time_since_last_zero = std::chrono::duration_cast<ms>(time_now - last_zero_sent[camera_slug]);
+
+    if ( time_since_last_zero.count() > 1000 ) {
+        last_zero_sent[camera_slug] = std::chrono::high_resolution_clock::now();
+
+        for (auto & tracked_class : tracked_classes) {
+            if ( highest_confidence[tracked_class] == 0 ) {
+                std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+tracked_class+"/confidence";
+                mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, "0");
+                confidence_msg->set_qos(QOS);
+                mqtt_cli->publish(confidence_msg);
+
+                std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+tracked_class+"/area";
+                mqtt::message_ptr area_msg = mqtt::make_message(area_topic, "0");
+                area_msg->set_qos(QOS);
+                mqtt_cli->publish(area_msg);
+            }
+        }
+    }
+
+    int baseLine;
+    cv::Size camera_name_size = cv::getTextSize(camera_name, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
+
+    cv::putText(img, camera_name,
+        cv::Point(img.size().width - camera_name_size.width*2, 0 + camera_name_size.height*2),
+        cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(256, 256, 256), 1.5);
+// ADDED STUFF END
 }
 
-const size_t DISP_WIDTH  = 1920;
-const size_t DISP_HEIGHT = 1080;
+const size_t DISP_WIDTH  = 1024;
+const size_t DISP_HEIGHT = 768;
 const size_t MAX_INPUTS  = 25;
 
 struct DisplayParams {
@@ -297,11 +377,11 @@ struct DisplayParams {
 DisplayParams prepareDisplayParams(size_t count) {
     DisplayParams params;
     params.count = count;
-    params.windowSize = cv::Size(FLAGS_dw, FLAGS_dh);
+    params.windowSize = cv::Size(DISP_WIDTH, DISP_HEIGHT);
 
     size_t gridCount = static_cast<size_t>(ceil(sqrt(count)));
-    size_t gridStepX = static_cast<size_t>(FLAGS_dw/gridCount);
-    size_t gridStepY = static_cast<size_t>(FLAGS_dh/gridCount);
+    size_t gridStepX = static_cast<size_t>(DISP_WIDTH/gridCount);
+    size_t gridStepY = static_cast<size_t>(DISP_HEIGHT/gridCount);
     if (gridStepX == 0 || gridStepY == 0) {
         throw std::logic_error("Can't display every input: there are too many of them");
     }
@@ -322,7 +402,8 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
                      const std::vector<cv::Scalar> &colors,
                      Presenter& presenter,
                      PerformanceMetrics& metrics,
-                     bool no_show) {
+                     bool no_show,
+                     mqtt::async_client_ptr mqtt_cli) {
     cv::Mat windowImage = cv::Mat::zeros(params.windowSize, CV_8UC3);
     auto loopBody = [&](size_t i) {
         auto& elem = data[i];
@@ -330,13 +411,13 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
             cv::Rect rectFrame = cv::Rect(params.points[i], params.frameSize);
             cv::Mat windowPart = windowImage(rectFrame);
             cv::resize(elem->frame, windowPart, params.frameSize);
-            drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors);
+            drawDetections(windowPart, elem->detections.get<std::vector<DetectionObject>>(), colors, mqtt_cli, camera_names[i]);
         }
     };
 
     auto drawStats = [&]() {
         if (FLAGS_show_stats && !stats.empty()) {
-            static const cv::Point posPoint = cv::Point(3*FLAGS_dw/4, 4*FLAGS_dh/5);
+            static const cv::Point posPoint = cv::Point(3*DISP_WIDTH/4, 4*DISP_HEIGHT/5);
             auto pos = posPoint + cv::Point(0, 25);
             size_t currPos = 0;
             while (true) {
@@ -375,11 +456,9 @@ void displayNSources(const std::vector<std::shared_ptr<VideoFrame>>& data,
     }
 
 // ADDED STUFF START
-    if (FLAGS_stream) {
-        std::vector<uchar> buff_bgr;
-        cv::imencode(".jpg", windowImage, buff_bgr, stream_params);
-        streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
-    }
+    std::vector<uchar> buff_bgr;
+    cv::imencode(".jpg", windowImage, buff_bgr, stream_params);
+    streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
 // ADDED STUFF END
 }
 }  // namespace
@@ -390,36 +469,82 @@ int main(int argc, char* argv[]) {
         TbbArenaWrapper arena;
 #endif
         parse(argc, argv);
-        const std::vector<std::string>& inputs = split(FLAGS_i, ',');
+
+        // MODIFIED LINE FOR NON-CONST
+        // const std::vector<std::string>& inputs = split(FLAGS_i, ',');
+        std::vector<std::string> inputs;
+
+// ADDED STUFF START
+        YAML::Node config;
+
+        config = YAML::LoadFile("./config.yaml");
+
+        const std::string model_path = config["yolo_v3_model_path"].as<std::string>();
+
+        const std::string device_type = config["device"].as<std::string>();
+
+        const std::string mqtt_host = config["mqtt_host"].as<std::string>();
+        const std::string mqtt_user = config["mqtt_user"].as<std::string>();
+        const std::string mqtt_password = config["mqtt_password"].as<std::string>();
+
+        tracked_classes = config["tracked_classes"].as<std::vector<std::string>>();
+
+        detection_threshold = config["detection_threshold"].as<double>();
+
+        if (config["cameras"].size() == 0 ) {
+            throw std::runtime_error("At least one camera configuration is required");
+        }
+
+        slog::info << "Cameras in YAML: " << config["cameras"].size() << slog::endl;
+
+        inputs.clear();
+
+        for (std::size_t i=0;i<config["cameras"].size();i++) {
+            const YAML::Node camera = config["cameras"][i];
+
+            std::string camera_input = camera["input"].as<std::string>();
+
+            std::string camera_name = camera["name"].as<std::string>();
+
+            inputs.push_back(camera_input);
+            camera_names.push_back(camera_name);
+        }
+// ADDED STUFF END
+
         DisplayParams params = prepareDisplayParams(inputs.size() * FLAGS_duplicate_num);
 
 // ADDED STUFF START
-        if (!FLAGS_mh.empty()) {
-            std::string address = FLAGS_mh;
+        mqtt::async_client_ptr mqtt_cli;
 
-            slog::info << "Connecting to server '" << address << "'..." << slog::endl;
+        mqtt_cli = std::make_shared<mqtt::async_client>(mqtt_host, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
 
-            mqtt::async_client cli(address, MQTT_CLIENT_ID, MAX_BUFFERED_MSGS);
+        if (!mqtt_host.empty()) {
+            slog::info << "Connecting to server '" << mqtt_host << "'..." << slog::endl;
 
             mqtt::connect_options connOpts;
             connOpts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);
             connOpts.set_clean_session(true);
             connOpts.set_automatic_reconnect(true);
-            connOpts.set_user_name(FLAGS_mu);
-            connOpts.set_password(FLAGS_mp);
+            connOpts.set_user_name(mqtt_user);
+            connOpts.set_password(mqtt_password);
+
+            mqtt::will_options lwt;
+
+            lwt.set_topic(STATUS_TOPIC);
+            lwt.set_payload(STATUS_OFFLINE);
+
+            connOpts.set_will(lwt);
 
             // Connect to the MQTT broker
-            cli.connect(connOpts)->wait();
+            mqtt_cli->connect(connOpts)->wait();
             slog::info << "OK" << slog::endl;
         }
 
-        if (FLAGS_stream) {
-            streamer.start(8080);
-        }
+        streamer.start(8080);
 // ADDED STUFF END
 
         ov::Core core;
-        std::shared_ptr<ov::Model> model = core.read_model(FLAGS_m);
+        std::shared_ptr<ov::Model> model = core.read_model(model_path);
         if (model->get_parameters().size() != 1) {
             throw std::logic_error("Face Detection model must have only one input");
         }
@@ -445,7 +570,7 @@ int main(int argc, char* argv[]) {
                 colors.push_back(cv::Scalar(rand() % 256, rand() % 256, rand() % 256));
 
         std::queue<ov::InferRequest> reqQueue = compile(std::move(model),
-            FLAGS_m, FLAGS_d, roundUp(params.count, FLAGS_bs), core);
+            model_path, device_type, roundUp(params.count, FLAGS_bs), core);
         ov::Shape inputShape = reqQueue.front().get_input_tensor().get_shape();
         if (4 != inputShape.size()) {
             throw std::runtime_error("Invalid model input dimensions");
@@ -479,7 +604,7 @@ int main(int argc, char* argv[]) {
             std::vector<DetectionObject> objects;
             // Parsing outputs
             for (const std::pair<ov::Output<ov::Node>, YoloParams>& idxParams : yoloParams) {
-                parseYOLOOutput(req.get_tensor(idxParams.first), idxParams.second, resized_im_h, resized_im_w, frameSize.height, frameSize.width, FLAGS_t, objects);
+                parseYOLOOutput(req.get_tensor(idxParams.first), idxParams.second, resized_im_h, resized_im_w, frameSize.height, frameSize.width, detection_threshold, objects);
             }
             // Filtering overlapping boxes and lower confidence object
             std::sort(objects.begin(), objects.end(), std::greater<DetectionObject>());
@@ -495,7 +620,7 @@ int main(int argc, char* argv[]) {
             detections[0].set(new std::vector<DetectionObject>);
 
             for (auto &object : objects) {
-                if (object.confidence < FLAGS_t)
+                if (object.confidence < detection_threshold)
                     continue;
                 detections[0].get<std::vector<DetectionObject>>().push_back(object);
             }
@@ -518,7 +643,7 @@ int main(int argc, char* argv[]) {
                 std::unique_lock<std::mutex> lock(statMutex);
                 str = statStream.str();
             }
-            displayNSources(result, str, params, colors, presenter, metrics, FLAGS_no_show);
+            displayNSources(result, str, params, colors, presenter, metrics, FLAGS_no_show, mqtt_cli);
             int key = cv::waitKey(1);
             presenter.handleKey(key);
 
@@ -534,6 +659,12 @@ int main(int argc, char* argv[]) {
         duration samplingTimeout(FLAGS_fps_sp);
 
         size_t perfItersCounter = 0;
+
+        mqtt::message_ptr status_online_msg = mqtt::make_message(STATUS_TOPIC, STATUS_ONLINE);
+        status_online_msg->set_qos(QOS);
+
+        mqtt_cli->publish(status_online_msg);
+        slog::info << "Detection online, threshold: " << detection_threshold << slog::endl;
 
         while (sources.isRunning() || graph.isRunning()) {
             bool readData = true;
@@ -594,9 +725,7 @@ int main(int argc, char* argv[]) {
     }
 
 // ADDED STUFF START
-    if (FLAGS_stream) {
-        streamer.stop();
-    }
+    streamer.stop();
 // ADDED STUFF END
 
     return 0;

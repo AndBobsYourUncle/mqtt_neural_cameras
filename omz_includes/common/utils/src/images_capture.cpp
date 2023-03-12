@@ -169,6 +169,8 @@ public:
             throw std::runtime_error("readLengthLimit must be positive");
         }
         if (cap.open(input)) {
+            std::cout << "VideoCapWrapper: " << input << std::endl;
+
             this->readLengthLimit = readLengthLimit;
             if (!cap.set(cv::CAP_PROP_POS_FRAMES, this->initialImageId))
                 throw OpenError("Can't set the frame to begin with");
@@ -241,7 +243,7 @@ public:
         }
         try {
             if (cap.open(std::stoi(input))) {
-                std::cout << input << std::endl;
+                std::cout << "CameraCapWrapper: " << input << std::endl;
 
                 this->readLengthLimit = loop ? std::numeric_limits<size_t>::max() : readLengthLimit;
                 cap.set(cv::CAP_PROP_BUFFERSIZE, 1);

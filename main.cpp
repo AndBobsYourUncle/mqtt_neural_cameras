@@ -310,7 +310,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
     for ( const auto &p : highest_confidence )
     {
-        std::cout << camera_slug << "\t" << p.first << '\t' << p.second << "\t" << highest_area[p.first] << std::endl;
+        // std::cout << camera_slug << "\t" << p.first << '\t' << p.second << "\t" << highest_area[p.first] << std::endl;
 
         std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
 

@@ -2,7 +2,7 @@ project(MqttNeuralSystem)
 
 cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 11)
-set(TARGET_NAME mqtt_neural_system)
+set(TARGET_NAME mqtt_neural_cameras)
 find_package(OpenCV REQUIRED)
 find_package(OpenVINO REQUIRED)
 find_package(gflags REQUIRED)

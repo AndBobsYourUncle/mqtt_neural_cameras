@@ -82,7 +82,7 @@ RUN git clone https://github.com/AndBobsYourUncle/mqtt_neural_cameras.git && \
     cd mqtt_neural_cameras && \
     git checkout a299fc3 && cmake . && make
 
-WORKDIR /home/openvino/mqtt_neural_system
+WORKDIR /home/openvino/mqtt_neural_cameras
 
 USER root
 

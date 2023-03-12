@@ -169,6 +169,7 @@ public:
             throw std::runtime_error("readLengthLimit must be positive");
         }
 // ADDED CODE START
+        cap.set(cv::CAP_PROP_FPS, 10);
         cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
 // ADDED CODE END
 

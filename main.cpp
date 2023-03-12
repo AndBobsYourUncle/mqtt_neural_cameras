@@ -308,8 +308,6 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
     for ( const auto &p : highest_confidence )
     {
-        std::cout << camera_slug << "\t" << p.first << '\t' << p.second << "\t" << highest_area[p.first] << std::endl;
-
         std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
 
         std::ostringstream ss;
@@ -487,6 +485,8 @@ int main(int argc, char* argv[]) {
 
         tracked_classes = config["tracked_classes"].as<std::vector<std::string>>();
 
+        const double detection_threshold = config["detection_threshold"].as<double>();
+
         if (config["cameras"].size() == 0 ) {
             throw std::runtime_error("At least one camera configuration is required");
         }
@@ -600,7 +600,7 @@ int main(int argc, char* argv[]) {
             std::vector<DetectionObject> objects;
             // Parsing outputs
             for (const std::pair<ov::Output<ov::Node>, YoloParams>& idxParams : yoloParams) {
-                parseYOLOOutput(req.get_tensor(idxParams.first), idxParams.second, resized_im_h, resized_im_w, frameSize.height, frameSize.width, FLAGS_t, objects);
+                parseYOLOOutput(req.get_tensor(idxParams.first), idxParams.second, resized_im_h, resized_im_w, frameSize.height, frameSize.width, detection_threshold, objects);
             }
             // Filtering overlapping boxes and lower confidence object
             std::sort(objects.begin(), objects.end(), std::greater<DetectionObject>());
@@ -616,7 +616,7 @@ int main(int argc, char* argv[]) {
             detections[0].set(new std::vector<DetectionObject>);
 
             for (auto &object : objects) {
-                if (object.confidence < FLAGS_t)
+                if (object.confidence < detection_threshold)
                     continue;
                 detections[0].get<std::vector<DetectionObject>>().push_back(object);
             }

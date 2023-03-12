@@ -241,6 +241,8 @@ public:
         }
         try {
             if (cap.open(std::stoi(input))) {
+                std::cout << input << std::endl;
+
                 this->readLengthLimit = loop ? std::numeric_limits<size_t>::max() : readLengthLimit;
                 cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
                 cap.set(cv::CAP_PROP_FRAME_WIDTH, cameraResolution.width);

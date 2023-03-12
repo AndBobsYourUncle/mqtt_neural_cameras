@@ -2,9 +2,9 @@ FROM openvino/ubuntu20_dev:2022.1.0
 
 USER root
 
-RUN apt-get update; \
-    apt-get install pkg-config software-properties-common -y --no-install-recommends; \
-    add-apt-repository ppa:rmescandon/yq; \
+RUN apt-get update && \
+    apt-get install pkg-config software-properties-common -y --no-install-recommends && \
+    add-apt-repository ppa:rmescandon/yq && \
     apt-get install -y --no-install-recommends \
         git \
         wget \

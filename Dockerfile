@@ -18,6 +18,7 @@ RUN apt-get update; \
         libgtk2.0-dev libgtk-3-dev gnome-devel \
         libcanberra-gtk-module libcanberra-gtk3-module \
         yq && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 ENV NO_AT_BRIDGE=1
@@ -31,7 +32,8 @@ RUN git clone https://github.com/opencv/opencv.git && \
     cd opencv_build && \
     cmake ../ && \
     make -j4 && \
-    make install
+    make install && \
+    cd ../../ && rm -rf opencv
 
 WORKDIR /tmp/dependencies
 
@@ -41,7 +43,8 @@ RUN git clone https://github.com/eclipse/paho.mqtt.c.git && \
     cmake -Bbuild -H. -DPAHO_ENABLE_TESTING=OFF -DPAHO_BUILD_STATIC=ON \
     -DPAHO_WITH_SSL=ON -DPAHO_HIGH_PERFORMANCE=ON && \
     cmake --build build/ --target install && \
-    ldconfig
+    ldconfig && \
+    cd ../ && rm -rf paho.mqtt.c
 
 WORKDIR /tmp/dependencies
 
@@ -49,25 +52,24 @@ RUN git clone https://github.com/eclipse/paho.mqtt.cpp && \
     cd /tmp/dependencies/paho.mqtt.cpp && \
     cmake -Bbuild -H. -DPAHO_BUILD_STATIC=ON && \
     cmake --build build/ --target install && \
-    ldconfig
+    ldconfig && \
+    cd ../ && rm -rf paho.mqtt.cpp
 
 WORKDIR /tmp/dependencies
 
 RUN git clone https://github.com/nadjieb/cpp-mjpeg-streamer.git && \
     cd /tmp/dependencies/cpp-mjpeg-streamer && \
     cmake . && \
-    make install
+    make install && \
+    cd ../ && rm -rf cpp-mjpeg-streamer
 
 WORKDIR /tmp/dependencies
 
 RUN git clone https://github.com/jbeder/yaml-cpp.git && \
     cd /tmp/dependencies/yaml-cpp && \
     cmake DYAML_BUILD_SHARED_LIBS=ON . && \
-    make install
-
-WORKDIR /tmp
-
-RUN rm -r /tmp/dependencies
+    make install && \
+    cd ../ && rm -rf yaml-cpp
 
 USER openvino
 

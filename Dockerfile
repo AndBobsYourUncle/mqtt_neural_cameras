@@ -80,7 +80,7 @@ RUN omz_downloader --name yolo-v3-tiny-tf && \
 
 RUN git clone https://github.com/AndBobsYourUncle/mqtt_neural_cameras.git && \
     cd mqtt_neural_cameras && \
-    git checkout 18b8a03 && cmake . && make
+    git checkout c5e7131 && cmake . && make
 
 WORKDIR /home/openvino/mqtt_neural_cameras
 

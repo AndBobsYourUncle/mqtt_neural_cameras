@@ -664,6 +664,7 @@ int main(int argc, char* argv[]) {
         status_online_msg->set_qos(QOS);
 
         mqtt_cli->publish(status_online_msg);
+        slog::info << "Detection online" << slog::endl;
 
         while (sources.isRunning() || graph.isRunning()) {
             bool readData = true;

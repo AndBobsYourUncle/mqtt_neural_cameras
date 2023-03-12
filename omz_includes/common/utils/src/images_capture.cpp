@@ -170,7 +170,7 @@ public:
         }
         if (cap.open(input)) {
 // ADDED CODE START
-            cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
+            // cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
 // ADDED CODE END
 
             this->readLengthLimit = readLengthLimit;

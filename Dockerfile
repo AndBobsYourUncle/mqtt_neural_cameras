@@ -86,6 +86,6 @@ WORKDIR /home/openvino/mqtt_neural_system
 
 USER root
 
-RUN chmod +x /home/openvino/mqtt_neural_system/start_mqtt_neural_cameras.sh
+RUN chmod +x /home/openvino/mqtt_neural_cameras/start_mqtt_neural_cameras.sh
 
 CMD [ "/bin/bash", "-c", "/home/openvino/mqtt_neural_cameras/start_mqtt_neural_cameras.sh" ]

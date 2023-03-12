@@ -57,9 +57,9 @@ const auto PERIOD = std::chrono::seconds(5);
 
 const int MAX_BUFFERED_MSGS = 120;  // 120 * 5sec => 10min off-line buffering
 
-const std::string MQTT_CLIENT_ID { "mqtt_neural_system" };
+const std::string MQTT_CLIENT_ID { "mqtt_neural_cameras" };
 
-const std::string STATUS_TOPIC { "mqtt_neural_system/status" };
+const std::string STATUS_TOPIC { "mqtt_neural_cameras/status" };
 
 const std::string STATUS_ONLINE { "ON" };
 
@@ -312,7 +312,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
     {
         // std::cout << camera_slug << "\t" << p.first << '\t' << p.second << "\t" << highest_area[p.first] << std::endl;
 
-        std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/confidence";
+        std::string confidence_topic = "mqtt_neural_cameras/cameras/"+camera_slug+"/"+p.first+"/confidence";
 
         std::ostringstream ss;
         ss << p.second;
@@ -321,7 +321,7 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
         confidence_msg->set_qos(QOS);
         mqtt_cli->publish(confidence_msg);
 
-        std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+p.first+"/area";
+        std::string area_topic = "mqtt_neural_cameras/cameras/"+camera_slug+"/"+p.first+"/area";
 
         std::ostringstream astr;
         astr << highest_area[p.first];
@@ -340,12 +340,12 @@ void drawDetections(cv::Mat& img, const std::vector<DetectionObject>& detections
 
         for (auto & tracked_class : tracked_classes) {
             if ( highest_confidence[tracked_class] == 0 ) {
-                std::string confidence_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+tracked_class+"/confidence";
+                std::string confidence_topic = "mqtt_neural_cameras/cameras/"+camera_slug+"/"+tracked_class+"/confidence";
                 mqtt::message_ptr confidence_msg = mqtt::make_message(confidence_topic, "0");
                 confidence_msg->set_qos(QOS);
                 mqtt_cli->publish(confidence_msg);
 
-                std::string area_topic = "mqtt_neural_system/cameras/"+camera_slug+"/"+tracked_class+"/area";
+                std::string area_topic = "mqtt_neural_cameras/cameras/"+camera_slug+"/"+tracked_class+"/area";
                 mqtt::message_ptr area_msg = mqtt::make_message(area_topic, "0");
                 area_msg->set_qos(QOS);
                 mqtt_cli->publish(area_msg);

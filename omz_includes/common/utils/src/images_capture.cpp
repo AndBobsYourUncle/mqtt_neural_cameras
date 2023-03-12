@@ -168,11 +168,11 @@ public:
         if (0 == readLengthLimit) {
             throw std::runtime_error("readLengthLimit must be positive");
         }
-        if (cap.open(input)) {
 // ADDED CODE START
-            cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
+        cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
 // ADDED CODE END
 
+        if (cap.open(input)) {
             this->readLengthLimit = readLengthLimit;
             if (!cap.set(cv::CAP_PROP_POS_FRAMES, this->initialImageId))
                 throw OpenError("Can't set the frame to begin with");

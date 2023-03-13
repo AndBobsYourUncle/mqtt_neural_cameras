@@ -219,10 +219,7 @@ int main(int argc, char *argv[])
     const float nms_threshold = 0.60f;
 
     const std::string model_path{"../yolov7-tiny.onnx"};
-    // const char *image_path{"http://192.1689.1.51:8081"};
-    const std::string device_name{"CPU"};
-
-    // cv::Mat src_img = cv::imread(image_path);
+    const std::string device_name{"MYRIAD"};
 
     cv::VideoCapture cap;
     cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
@@ -272,8 +269,6 @@ int main(int argc, char *argv[])
     cv::Mat inference_frame;
     std::vector<float> inference_padd;
 
-    cv::Mat src_img;
-
     cv::Mat boxed_inference;
 
     typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
@@ -281,7 +276,7 @@ int main(int argc, char *argv[])
     std::chrono::time_point<std::chrono::high_resolution_clock> t1;
 
     while (!exit_gracefully) {
-        // std::cout << "fetching frame" << std::endl;
+        cv::Mat src_img;
 
         if (!cap.read(src_img)) {
             if (src_img.empty()) {

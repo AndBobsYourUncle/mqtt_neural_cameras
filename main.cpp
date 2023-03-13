@@ -303,6 +303,8 @@ int main(int argc, char *argv[])
             std::cout << "first frame send" << std::endl;
         }
 
+        std::cout << "check for done" << std::endl;
+
         if (infer_request.wait_for(std::chrono::milliseconds(0))) {
             std::cout << "processing" << std::endl;
 

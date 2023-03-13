@@ -284,6 +284,8 @@ int main(int argc, char *argv[])
         }
 
         if ( first_frame ) {
+            std:cout << "sending first frame" << std::endl;
+
             inference_frame = src_img;
 
             inference_padd.clear();

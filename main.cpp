@@ -315,7 +315,9 @@ int main(int argc, char *argv[])
 
             ms detection = std::chrono::duration_cast<ms>(t1 - t0);
 
-            std::cout << "processing (" << 1000.f / detection.count() << " fps)" << std::endl;
+            std::cout << "Detection: "
+                << std::fixed << std::setprecision(2) << detection.count()
+                << "ms (" << 1000.f / detection.count() << " fps)" << std::endl;
 
             // -------- Step 8. Process output --------
             auto output_tensor_p8 = infer_request.get_output_tensor(0);

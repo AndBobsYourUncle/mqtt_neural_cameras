@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
             ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed_inference.data);
             infer_request.set_input_tensor(input_tensor);
             // -------- Step 7. Start inference --------
-            // infer_request.start_async();
+            infer_request.start_async();
 
             first_frame = false;
 

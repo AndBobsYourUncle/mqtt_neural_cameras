@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
     const float nms_threshold = 0.60f;
 
     const std::string model_path{"../yolov7-tiny.onnx"};
-    const char *image_path{"http://192.1689.1.51:8081"};
+    // const char *image_path{"http://192.1689.1.51:8081"};
     const std::string device_name{"CPU"};
 
     // cv::Mat src_img = cv::imread(image_path);
@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
     cv::VideoCapture cap;
     cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
 
-    cap.open(image_path);
+    cap.open("http://192.1689.1.51:8081");
 
     // -------- Step 1. Initialize OpenVINO Runtime Core --------
     ov::Core core;

@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
     cv::Mat boxed_inference;
 
     while (!exit_gracefully) {
-        std::cout << "fetching frame" << std::endl;
+        // std::cout << "fetching frame" << std::endl;
 
         if (!cap.read(src_img)) {
             if (src_img.empty()) {
@@ -306,13 +306,13 @@ int main(int argc, char *argv[])
 
             first_frame = false;
 
-            std::cout << "first frame send" << std::endl;
+            std::cout << "first frame sent" << std::endl;
         }
 
-        std::cout << "check for done" << std::endl;
+        // std::cout << "check for done" << std::endl;
 
-        // if (false && infer_request.wait_for(std::chrono::milliseconds(0))) {
-        if (false) {
+        if (infer_request.wait_for(std::chrono::milliseconds(0))) {
+        // if (false) {
             std::cout << "processing" << std::endl;
 
             // -------- Step 8. Process output --------
@@ -368,14 +368,14 @@ int main(int argc, char *argv[])
             cv::imencode(".jpg", inference_frame, buff_bgr, stream_params);
             streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
 
-            inference_frame = src_img;
+            inference_frame = src_img.clone();
 
             inference_padd.clear();
-            cv::Mat boxed = letterbox(src_img, img_h, img_w, inference_padd);
+            boxed_inference = letterbox(src_img, img_h, img_w, inference_padd);
 
             // -------- Step 6. Set input --------
-            boxed.convertTo(boxed, CV_32FC3);
-            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
+            boxed_inference.convertTo(boxed_inference, CV_32FC3);
+            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed_inference.data);
             infer_request.set_input_tensor(input_tensor);
             // -------- Step 7. Start inference --------
             infer_request.start_async();

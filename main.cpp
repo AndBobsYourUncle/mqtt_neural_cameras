@@ -272,16 +272,16 @@ int main(int argc, char *argv[])
     cv::Mat inference_frame;
     std::vector<float> inference_padd;
 
-    cv::Mat src_img;
-
     while (!exit_gracefully) {
-        if ( first_frame ) {
-            if (!cap.read(src_img)) {
-                if (src_img.empty()) {
-                    exit_gracefully = true;  // end of video file
-                } else {
-                    throw std::logic_error("Failed to get frame from cv::VideoCapture");
-                }
+        cv::Mat src_img;
+
+        if (!cap.read(src_img)) {
+            if (src_img.empty()) {
+                exit_gracefully = true;  // end of video file
+
+                break;
+            } else {
+                throw std::logic_error("Failed to get frame from cv::VideoCapture");
             }
         }
 

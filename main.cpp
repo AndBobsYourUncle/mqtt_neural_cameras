@@ -368,9 +368,9 @@ int main(int argc, char *argv[])
                 drawPred(classIds[idx], confidences[idx], scaled_box, inference_padd[2], raw_h, raw_w, inference_frame, class_names);
             }
 
-            std::vector<uchar> buff_bgr;
-            cv::imencode(".jpg", inference_frame, buff_bgr, stream_params);
-            streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
+            // std::vector<uchar> buff_bgr;
+            // cv::imencode(".jpg", inference_frame, buff_bgr, stream_params);
+            // streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
 
             inference_frame = src_img.clone();
 

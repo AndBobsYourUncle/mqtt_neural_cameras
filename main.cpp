@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
     while (!exit_gracefully) {
         cv::Mat src_img;
 
-        t0[camera_index] = std::chrono::high_resolution_clock::now();
+        // t0[camera_index] = std::chrono::high_resolution_clock::now();
         // Here is the first asynchronous point:
         // in the Async mode, we capture frame to populate the NEXT infer request
         // in the regular mode, we capture frame to the CURRENT infer request

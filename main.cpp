@@ -299,6 +299,8 @@ int main(int argc, char *argv[])
             infer_request.start_async();
 
             first_frame = false;
+
+            std::cout << "first frame send" << std::endl;
         }
 
         if (infer_request.wait_for(std::chrono::milliseconds(0))) {

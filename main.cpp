@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
 
     const std::string model_path{"../yolov7-tiny.onnx"};
     // const char *image_path{"http://192.1689.1.51:8081"};
-    const std::string device_name{"MYRIAD"};
+    const std::string device_name{"CPU"};
 
     // cv::Mat src_img = cv::imread(image_path);
 

@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
     cv::VideoCapture cap;
     cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
 
-    cap.open("http://192.1689.1.51:8081");
+    cap.open("http://192.168.1.51:8081");
 
     // -------- Step 1. Initialize OpenVINO Runtime Core --------
     ov::Core core;

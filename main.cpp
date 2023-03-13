@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
 
         std::cout << "check for done" << std::endl;
 
-        if (infer_request.wait_for(std::chrono::milliseconds(1))) {
+        if (false && infer_request.wait_for(std::chrono::milliseconds(0))) {
             std::cout << "processing" << std::endl;
 
             // -------- Step 8. Process output --------

@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
     while (!exit_gracefully) {
         cv::Mat src_img;
 
-        if ( !first_frame ) {
+        if ( first_frame ) {
             if (!cap.read(src_img)) {
                 if (src_img.empty()) {
                     exit_gracefully = true;  // end of video file

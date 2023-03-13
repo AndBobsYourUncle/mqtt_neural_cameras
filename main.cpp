@@ -276,6 +276,10 @@ int main(int argc, char *argv[])
 
     cv::Mat boxed_inference;
 
+    typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
+    std::chrono::time_point<std::chrono::high_resolution_clock> t0;
+    std::chrono::time_point<std::chrono::high_resolution_clock> t1;
+
     while (!exit_gracefully) {
         // std::cout << "fetching frame" << std::endl;
 
@@ -304,6 +308,8 @@ int main(int argc, char *argv[])
             // -------- Step 7. Start inference --------
             infer_request.start_async();
 
+            t0 = std::chrono::high_resolution_clock::now();
+
             first_frame = false;
 
             std::cout << "first frame sent" << std::endl;
@@ -313,7 +319,11 @@ int main(int argc, char *argv[])
 
         if (infer_request.wait_for(std::chrono::milliseconds(0))) {
         // if (false) {
-            std::cout << "processing" << std::endl;
+            t1 = std::chrono::high_resolution_clock::now();
+
+            ms detection = std::chrono::duration_cast<ms>(t1 - t0);
+
+            std::cout << "processing (" << 1000.f / detection.count() << " fps)" << std::endl;
 
             // -------- Step 8. Process output --------
             auto output_tensor_p8 = infer_request.get_output_tensor(0);
@@ -379,6 +389,8 @@ int main(int argc, char *argv[])
             infer_request.set_input_tensor(input_tensor);
             // -------- Step 7. Start inference --------
             infer_request.start_async();
+
+            t0 = std::chrono::high_resolution_clock::now();
         }
     }
 

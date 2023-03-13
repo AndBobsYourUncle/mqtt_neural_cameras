@@ -77,9 +77,11 @@ RUN git clone https://github.com/WongKinYiu/yolov7.git && \
     cd yolov7 && \
     pip install -r requirements.txt && \
     wget https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7-tiny.pt && \
-    python3 export.py --weights yolov7-tiny.pt && \
+    python3 export.py --fp16 --weights yolov7-tiny.pt && \
     cp yolov7-tiny.onnx /home/openvino && \
     cd ../ && rm -rf yolov7
+
+WORKDIR /home/openvino
 
 RUN git clone https://github.com/AndBobsYourUncle/mqtt_neural_cameras.git && \
     cd mqtt_neural_cameras && \

@@ -315,10 +315,7 @@ int main(int argc, char *argv[])
             std::cout << "first frame sent" << std::endl;
         }
 
-        // std::cout << "check for done" << std::endl;
-
         if (infer_request.wait_for(std::chrono::milliseconds(0))) {
-        // if (false) {
             t1 = std::chrono::high_resolution_clock::now();
 
             ms detection = std::chrono::duration_cast<ms>(t1 - t0);

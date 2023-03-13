@@ -11,16 +11,8 @@ find_package(nadjieb_mjpeg_streamer REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 add_executable(${TARGET_NAME} main.cpp)
-# uncomment the code below to enable preprocessing api for optimization
-# add_executable(${TARGET_NAME} main_preprocessing.cpp)
-
-add_subdirectory(./omz_includes/common)
-add_subdirectory(./omz_includes/multi_channel_common)
 
 target_link_libraries(${TARGET_NAME} PRIVATE
-  utils
-  monitors
-  multi_channel_common
   openvino::runtime
   nadjieb_mjpeg_streamer::nadjieb_mjpeg_streamer
   gflags paho-mqttpp3

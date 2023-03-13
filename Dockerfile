@@ -71,16 +71,19 @@ RUN git clone https://github.com/jbeder/yaml-cpp.git && \
     make install && \
     cd ../ && rm -rf yaml-cpp
 
-USER openvino
+WORKDIR /tmp/dependencies
 
-WORKDIR /home/openvino
-
-RUN omz_downloader --name yolo-v3-tiny-tf && \
-    omz_converter --name yolo-v3-tiny-tf
+RUN git clone https://github.com/WongKinYiu/yolov7.git && \
+    cd yolov7 && \
+    pip install -r requirements.txt && \
+    wget https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7-tiny.pt && \
+    python export.py --weights yolov7-tiny.pt && \
+    cp yolov7-tiny.onnx /home/openvino && \
+    cd ../ && rm -rf yolov7
 
 RUN git clone https://github.com/AndBobsYourUncle/mqtt_neural_cameras.git && \
     cd mqtt_neural_cameras && \
-    git checkout c5e7131 && cmake . && make
+    git checkout new_yolov7 && cmake . && make
 
 WORKDIR /home/openvino/mqtt_neural_cameras
 

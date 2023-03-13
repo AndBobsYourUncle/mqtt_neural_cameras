@@ -4,5 +4,4 @@ CMakeFiles
 CMakeCache.txt
 Makefile
 cmake_install.cmake
-mqtt_neural_system
-test.jpg
+mqtt_neural_cameras

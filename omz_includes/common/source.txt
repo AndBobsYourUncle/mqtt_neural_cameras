@@ -1,1 +1,0 @@
-Cloned from: https://github.com/openvinotoolkit/open_model_zoo/tree/master/demos/common/cpp

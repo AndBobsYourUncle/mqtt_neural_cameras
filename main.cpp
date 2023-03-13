@@ -264,6 +264,14 @@ int main(int argc, char *argv[])
 
     streamer.start(8080);
 
+    // -------- Step 5. Create an infer request --------
+    ov::InferRequest infer_request = compiled_model.create_infer_request();
+
+    bool first_frame = true;
+
+    cv::Mat inference_frame;
+    std::vector<float> inference_padd;
+
     while (!exit_gracefully) {
         cv::Mat src_img;
 
@@ -275,71 +283,88 @@ int main(int argc, char *argv[])
             }
         }
 
-        std::vector<float> padd;
-        cv::Mat boxed = letterbox(src_img, img_h, img_w, padd);
+        if ( first_frame ) {
+            inference_frame = src_img;
 
-        // -------- Step 5. Create an infer request --------
-        ov::InferRequest infer_request = compiled_model.create_infer_request();
+            inference_padd.clear();
+            cv::Mat boxed = letterbox(src_img, img_h, img_w, inference_padd);
 
-        // -------- Step 6. Set input --------
-        boxed.convertTo(boxed, CV_32FC3);
-        ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
-        infer_request.set_input_tensor(input_tensor);
-        // -------- Step 7. Start inference --------
-        infer_request.start_async();
+            // -------- Step 6. Set input --------
+            boxed.convertTo(boxed, CV_32FC3);
+            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
+            infer_request.set_input_tensor(input_tensor);
+            // -------- Step 7. Start inference --------
+            infer_request.start_async();
 
-        // -------- Step 8. Process output --------
-        auto output_tensor_p8 = infer_request.get_output_tensor(0);
-        const float *result_p8 = output_tensor_p8.data<const float>();
-        auto output_tensor_p16 = infer_request.get_output_tensor(1);
-        const float *result_p16 = output_tensor_p16.data<const float>();
-        auto output_tensor_p32 = infer_request.get_output_tensor(2);
-        const float *result_p32 = output_tensor_p32.data<const float>();
-
-        std::vector<Object> proposals;
-        std::vector<Object> objects8;
-        std::vector<Object> objects16;
-        std::vector<Object> objects32;
-
-        generate_proposals(8, result_p8, prob_threshold, objects8);
-        proposals.insert(proposals.end(), objects8.begin(), objects8.end());
-        generate_proposals(16, result_p16, prob_threshold, objects16);
-        proposals.insert(proposals.end(), objects16.begin(), objects16.end());
-        generate_proposals(32, result_p32, prob_threshold, objects32);
-        proposals.insert(proposals.end(), objects32.begin(), objects32.end());
-
-        std::vector<int> classIds;
-        std::vector<float> confidences;
-        std::vector<cv::Rect> boxes;
-
-        for (size_t i = 0; i < proposals.size(); i++)
-        {
-            classIds.push_back(proposals[i].label);
-            confidences.push_back(proposals[i].prob);
-            boxes.push_back(proposals[i].rect);
+            first_frame = false;
         }
 
-        std::vector<int> picked;
+        if (infer_request.wait_for(0)) {
+            // -------- Step 8. Process output --------
+            auto output_tensor_p8 = infer_request.get_output_tensor(0);
+            const float *result_p8 = output_tensor_p8.data<const float>();
+            auto output_tensor_p16 = infer_request.get_output_tensor(1);
+            const float *result_p16 = output_tensor_p16.data<const float>();
+            auto output_tensor_p32 = infer_request.get_output_tensor(2);
+            const float *result_p32 = output_tensor_p32.data<const float>();
 
-        // do non maximum suppression for each bounding boxx
-        cv::dnn::NMSBoxes(boxes, confidences, prob_threshold, nms_threshold, picked);
+            std::vector<Object> proposals;
+            std::vector<Object> objects8;
+            std::vector<Object> objects16;
+            std::vector<Object> objects32;
 
-        float raw_h = src_img.rows;
-        float raw_w = src_img.cols;
-        float ratio_x = (float)raw_w / img_w;
-        float ratio_y = (float)raw_h / img_h;
+            generate_proposals(8, result_p8, prob_threshold, objects8);
+            proposals.insert(proposals.end(), objects8.begin(), objects8.end());
+            generate_proposals(16, result_p16, prob_threshold, objects16);
+            proposals.insert(proposals.end(), objects16.begin(), objects16.end());
+            generate_proposals(32, result_p32, prob_threshold, objects32);
+            proposals.insert(proposals.end(), objects32.begin(), objects32.end());
 
-        for (size_t i = 0; i < picked.size(); i++)
-        {
-            int idx = picked[i];
-            cv::Rect box = boxes[idx];
-            cv::Rect scaled_box = scale_box(box, padd);
-            drawPred(classIds[idx], confidences[idx], scaled_box, padd[2], raw_h, raw_w, src_img, class_names);
+            std::vector<int> classIds;
+            std::vector<float> confidences;
+            std::vector<cv::Rect> boxes;
+
+            for (size_t i = 0; i < proposals.size(); i++)
+            {
+                classIds.push_back(proposals[i].label);
+                confidences.push_back(proposals[i].prob);
+                boxes.push_back(proposals[i].rect);
+            }
+
+            std::vector<int> picked;
+
+            // do non maximum suppression for each bounding boxx
+            cv::dnn::NMSBoxes(boxes, confidences, prob_threshold, nms_threshold, picked);
+
+            float raw_h = inference_frame.rows;
+            float raw_w = inference_frame.cols;
+            float ratio_x = (float)raw_w / img_w;
+            float ratio_y = (float)raw_h / img_h;
+
+            for (size_t i = 0; i < picked.size(); i++)
+            {
+                int idx = picked[i];
+                cv::Rect box = boxes[idx];
+                cv::Rect scaled_box = scale_box(box, inference_padd);
+                drawPred(classIds[idx], confidences[idx], scaled_box, inference_padd[2], raw_h, raw_w, inference_frame, class_names);
+            }
+
+            std::vector<uchar> buff_bgr;
+            cv::imencode(".jpg", inference_frame, buff_bgr, stream_params);
+            streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
+
+            inference_frame = src_img;
+
+            inference_padd.clear();
+            cv::Mat boxed = letterbox(src_img, img_h, img_w, inference_padd);
+
+            // -------- Step 6. Set input --------
+            boxed.convertTo(boxed, CV_32FC3);
+            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
+            infer_request.set_input_tensor(input_tensor);
+            // -------- Step 7. Start inference --------
+            infer_request.start_async();
         }
-
-        std::vector<uchar> buff_bgr;
-        cv::imencode(".jpg", src_img, buff_bgr, stream_params);
-        streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
     }
 
     streamer.stop();

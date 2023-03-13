@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
     const float nms_threshold = 0.60f;
 
     const std::string model_path{"../yolov7-tiny.onnx"};
-    const std::string device_name{"GPU"};
+    const std::string device_name{"MYRIAD"};
 
     cv::VideoCapture cap;
     cap.set(cv::CAP_PROP_BUFFERSIZE, 1);

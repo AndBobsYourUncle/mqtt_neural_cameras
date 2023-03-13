@@ -274,6 +274,8 @@ int main(int argc, char *argv[])
 
     cv::Mat src_img;
 
+    cv::Mat boxed_inference;
+
     while (!exit_gracefully) {
         std::cout << "fetching frame" << std::endl;
 
@@ -293,11 +295,11 @@ int main(int argc, char *argv[])
             inference_frame = src_img.clone();
 
             inference_padd.clear();
-            cv::Mat boxed = letterbox(inference_frame, img_h, img_w, inference_padd);
+            boxed_inference = letterbox(inference_frame, img_h, img_w, inference_padd);
 
             // -------- Step 6. Set input --------
-            boxed.convertTo(boxed, CV_32FC3);
-            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
+            boxed_inference.convertTo(boxed_inference, CV_32FC3);
+            ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed_inference.data);
             infer_request.set_input_tensor(input_tensor);
             // -------- Step 7. Start inference --------
             // infer_request.start_async();

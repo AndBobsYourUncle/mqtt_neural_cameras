@@ -275,11 +275,13 @@ int main(int argc, char *argv[])
     while (!exit_gracefully) {
         cv::Mat src_img;
 
-        if (!cap.read(src_img)) {
-            if (src_img.empty()) {
-                exit_gracefully = true;  // end of video file
-            } else {
-                throw std::logic_error("Failed to get frame from cv::VideoCapture");
+        if ( !first_frame ) {
+            if (!cap.read(src_img)) {
+                if (src_img.empty()) {
+                    exit_gracefully = true;  // end of video file
+                } else {
+                    throw std::logic_error("Failed to get frame from cv::VideoCapture");
+                }
             }
         }
 

@@ -291,7 +291,7 @@ int main(int argc, char *argv[])
             inference_frame = src_img.clone();
 
             inference_padd.clear();
-            cv::Mat boxed = letterbox(src_img, img_h, img_w, inference_padd);
+            cv::Mat boxed = letterbox(inference_frame, img_h, img_w, inference_padd);
 
             // -------- Step 6. Set input --------
             boxed.convertTo(boxed, CV_32FC3);
@@ -307,7 +307,8 @@ int main(int argc, char *argv[])
 
         std::cout << "check for done" << std::endl;
 
-        if (false && infer_request.wait_for(std::chrono::milliseconds(0))) {
+        // if (false && infer_request.wait_for(std::chrono::milliseconds(0))) {
+        if (false) {
             std::cout << "processing" << std::endl;
 
             // -------- Step 8. Process output --------

@@ -267,10 +267,6 @@ int main(int argc, char *argv[])
     while (!exit_gracefully) {
         cv::Mat src_img;
 
-        // t0[camera_index] = std::chrono::high_resolution_clock::now();
-        // Here is the first asynchronous point:
-        // in the Async mode, we capture frame to populate the NEXT infer request
-        // in the regular mode, we capture frame to the CURRENT infer request
         if (!cap.read(src_img)) {
             if (src_img.empty()) {
                 exit_gracefully = true;  // end of video file
@@ -290,7 +286,7 @@ int main(int argc, char *argv[])
         ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
         infer_request.set_input_tensor(input_tensor);
         // -------- Step 7. Start inference --------
-        infer_request.infer();
+        infer_request.start_async();
 
         // -------- Step 8. Process output --------
         auto output_tensor_p8 = infer_request.get_output_tensor(0);

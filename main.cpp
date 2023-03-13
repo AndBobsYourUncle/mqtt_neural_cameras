@@ -300,6 +300,8 @@ int main(int argc, char *argv[])
         }
 
         if (infer_request.wait_for(std::chrono::milliseconds(0))) {
+            std:cout << "processing" << std:endl;
+
             // -------- Step 8. Process output --------
             auto output_tensor_p8 = infer_request.get_output_tensor(0);
             const float *result_p8 = output_tensor_p8.data<const float>();

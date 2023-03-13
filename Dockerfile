@@ -83,12 +83,12 @@ RUN git clone https://github.com/WongKinYiu/yolov7.git && \
 
 RUN git clone https://github.com/AndBobsYourUncle/mqtt_neural_cameras.git && \
     cd mqtt_neural_cameras && \
-    git checkout new_yolov7 && cmake . && make
+    git checkout new_yolov7
 
 WORKDIR /home/openvino/mqtt_neural_cameras
 
-USER root
+# USER root
 
-RUN chmod +x /home/openvino/mqtt_neural_cameras/start_mqtt_neural_cameras.sh
+# RUN chmod +x /home/openvino/mqtt_neural_cameras/start_mqtt_neural_cameras.sh
 
-CMD [ "/bin/bash", "-c", "/home/openvino/mqtt_neural_cameras/start_mqtt_neural_cameras.sh" ]
+# CMD [ "/bin/bash", "-c", "/home/openvino/mqtt_neural_cameras/start_mqtt_neural_cameras.sh" ]

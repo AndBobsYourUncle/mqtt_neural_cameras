@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
 
     streamer.start(8080);
 
-    for {
+    while (!exit_gracefully) {
         cv::Mat src_img;
 
         t0[camera_index] = std::chrono::high_resolution_clock::now();
@@ -344,10 +344,6 @@ int main(int argc, char *argv[])
         std::vector<uchar> buff_bgr;
         cv::imencode(".jpg", src_img, buff_bgr, stream_params);
         streamer.publish("/detection_output", std::string(buff_bgr.begin(), buff_bgr.end()));
-
-        if ( exit_gracefully ) {
-            break;
-        }
     }
 
     streamer.stop();

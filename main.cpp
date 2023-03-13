@@ -272,9 +272,9 @@ int main(int argc, char *argv[])
     cv::Mat inference_frame;
     std::vector<float> inference_padd;
 
-    while (!exit_gracefully) {
-        cv::Mat src_img;
+    cv::Mat src_img;
 
+    while (!exit_gracefully) {
         if (!cap.read(src_img)) {
             if (src_img.empty()) {
                 exit_gracefully = true;  // end of video file

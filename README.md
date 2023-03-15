@@ -78,7 +78,7 @@ Once running, various MQTT sensors can be created for each camera within Home As
 
 A simple automation using the Motioneye addon's "Motion webcontrol" can be used to automatically stop/start recording based on detections. To start, you want to configure Motioneye to record movies based on motion. Then create a motion mask that blocks out the entire frame within Motioneye's UI. This enables Motioneye to record based on motion events, but because you are masking out the entire frame, then the only way in which it will start recording is if we artificially trigger motion on the camera.
 
-Your automation can then make an API GET request to:
+Your automation can then make an API GET request to
 `http://IP_OF_MOTIONEYE_HOST:7999/1/config/set?emulate_motion=on`
 to start recording on camera 1 in Motioneye.
 
@@ -87,3 +87,9 @@ Another call to
 would then stop the recording.
 
 I've typically gone with a bit of NodeRED to automate this, as it makes it easier to setup the logic around expected area and confidence, time intervals, and timers to automatically stop recording, but it should also be doable with plain Home Assistant automations as well.
+
+## Restrictions
+
+I've only built a Docker image for this based on the amd64 architecture, so running it as an addon in Home Assistant using a Raspberry Pi is not possible at the moment. However, based on how OpenVINO supports running within Docker on a Raspberry Pi, it should be possible if an image was built for that architecture.
+
+Also, running this on a Raspberry PI would limit you to only being able to use a Neural Compute Stick 2 as the inference device, since the CPU in a RPI is not an Intel CPU. This is partly why I have only really built it for amd64 at the moment.

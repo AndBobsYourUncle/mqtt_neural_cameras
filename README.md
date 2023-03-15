@@ -9,7 +9,7 @@ Some of the common includes were cloned over, and a couple slight tweaks were ma
 
 In the end, the application that runs is largely the same as the demo, except that you can see the output through an MJPEG stream, configure it purely via a YAML file, and get the live detection results fed into an MQTT broker.
 
-The philosophy behind this project is simple: it shouldn't do anything above and beyond simply informing MQTT of detected classes, and their confidence/areas. This is to maximize the usefulness and modularity of the app, and let it be used in many different setup scenarios. For example, a user could be running Motioneye, and have Motioneye record videos for them, but use this app's MQTT values trigger Motioneye to record and stop recording.
+The philosophy behind this project is simple: it shouldn't do anything above and beyond simply informing MQTT of detected classes, and their confidence/areas. This is to maximize the usefulness and modularity of the app, and let it be used in many different setup scenarios. For example, a user could be running Motioneye, and have Motioneye record videos for them, but use this app's MQTT values to trigger Motioneye to record and stop recording.
 
 ## Getting Started
 
